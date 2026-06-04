@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 07 — Mediation & variables: AssignMessage + ExtractVariables · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li class="active"><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Mediation &middot; Week 2 &middot; ~60 min</div><h1 id="day-7-mediation-variables-assignmessage-extractvariables">Day 7 — Mediation &amp; variables: AssignMessage + ExtractVariables</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll read values out of any part of a request with <strong>ExtractVariables</strong>, and build/modify requests and responses precisely with <strong>AssignMessage</strong>, using Apigee's <strong>flow variables</strong> as the connective tissue.</p>
+<p><strong>Builds on Day 5–6:</strong> you've used AssignMessage to set a payload; today you learn the full read/transform/write loop.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Mediation — turning the client's request into what the backend wants, and the backend's response into what the client expects — is the single most common proxy job. In banking you constantly reshape: extract an account id from the path, inject auth headers for the core system, strip internal fields from responses.</p>
+<h2 id="flow-variables-the-data-bus">Flow variables: the data bus</h2>
+<p>Everything Apigee knows lives in <strong>variables</strong>. You read them in conditions, templates, and policies. The essentials:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>request.verb</code>, <code>request.uri</code>, <code>proxy.pathsuffix</code></td>
+<td>method, full URI, path after BasePath</td>
+</tr>
+<tr>
+<td><code>request.header.NAME</code> / <code>response.header.NAME</code></td>
+<td>a header value</td>
+</tr>
+<tr>
+<td><code>request.queryparam.NAME</code></td>
+<td>a query parameter</td>
+</tr>
+<tr>
+<td><code>request.content</code> / <code>response.content</code></td>
+<td>the body as a string</td>
+</tr>
+<tr>
+<td><code>request.formparam.NAME</code></td>
+<td>a form field</td>
+</tr>
+<tr>
+<td><code>client.ip</code>, <code>messageid</code>, <code>system.timestamp</code></td>
+<td>context</td>
+</tr>
+<tr>
+<td><code>target.url</code></td>
+<td>the resolved backend URL</td>
+</tr>
+</tbody>
+</table>
+<p>Custom variables you create live in whatever name you choose (convention: <code>prefix.name</code>, e.g. <code>ob.accountId</code>).</p>
+<h2 id="extractvariables-read-structured-data-out">ExtractVariables — read structured data out</h2>
+<p>It pulls values from path, query, header, form, JSON, or XML into named variables.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;ExtractVariables</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;EV-AccountId&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>EV-AccountId<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- prefix for all created variables: ob.* --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;VariablePrefix&gt;</span>ob<span class="nt">&lt;/VariablePrefix&gt;</span>
+
+<span class="w">  </span><span class="cm">&lt;!-- from the URI path: /accounts/{accountId}/transactions --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;URIPath&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Pattern</span><span class="w"> </span><span class="na">ignoreCase=</span><span class="s">&quot;false&quot;</span><span class="nt">&gt;</span>/accounts/{accountId}/transactions<span class="nt">&lt;/Pattern&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/URIPath&gt;</span>
+
+<span class="w">  </span><span class="cm">&lt;!-- from a query param ?fromBookingDateTime=... --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;QueryParam</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;fromBookingDateTime&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Pattern</span><span class="w"> </span><span class="na">ignoreCase=</span><span class="s">&quot;true&quot;</span><span class="nt">&gt;</span>{fromDate}<span class="nt">&lt;/Pattern&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/QueryParam&gt;</span>
+
+<span class="w">  </span><span class="cm">&lt;!-- from a JSON request body using JSONPath --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;JSONPayload&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Variable</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;amount&quot;</span><span class="nt">&gt;&lt;JSONPath&gt;</span>$.Data.Initiation.InstructedAmount.Amount<span class="nt">&lt;/JSONPath&gt;&lt;/Variable&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Variable</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;currency&quot;</span><span class="nt">&gt;&lt;JSONPath&gt;</span>$.Data.Initiation.InstructedAmount.Currency<span class="nt">&lt;/JSONPath&gt;&lt;/Variable&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/JSONPayload&gt;</span>
+
+<span class="w">  </span><span class="cm">&lt;!-- from a header --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;x-fapi-interaction-id&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Pattern&gt;</span>{interactionId}<span class="nt">&lt;/Pattern&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Header&gt;</span>
+<span class="nt">&lt;/ExtractVariables&gt;</span>
+</code></pre></div>
+
+<p>After this runs you have <code>ob.accountId</code>, <code>ob.fromDate</code>, <code>ob.amount</code>, <code>ob.currency</code>, <code>ob.interactionId</code>.</p>
+<blockquote>
+<p><strong>Source matters:</strong> by default ExtractVariables reads the <strong>request</strong>. To read a response body, add <code>&lt;Source&gt;response&lt;/Source&gt;</code>.</p>
+</blockquote>
+<h2 id="assignmessage-build-and-modify-four-verbs">AssignMessage — build and modify, four verbs</h2>
+<p><code>AssignMessage</code> has four kinds of children. Know what each does:</p>
+<table>
+<thead>
+<tr>
+<th>Child</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;Set&gt;</code></td>
+<td>Overwrite headers, query params, payload, verb, path, status</td>
+</tr>
+<tr>
+<td><code>&lt;Add&gt;</code></td>
+<td>Append (e.g. add a header <strong>without</strong> removing existing ones)</td>
+</tr>
+<tr>
+<td><code>&lt;Copy&gt;</code></td>
+<td>Copy from the <em>source</em> message into the target</td>
+</tr>
+<tr>
+<td><code>&lt;Remove&gt;</code></td>
+<td>Delete headers/params/payload</td>
+</tr>
+<tr>
+<td><code>&lt;AssignVariable&gt;</code></td>
+<td>Create/seed a flow variable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="inject-backend-auth-correlation-onto-the-request">Inject backend auth + correlation onto the request</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-BackendRequest&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>AM-BackendRequest<span class="nt">&lt;/DisplayName&gt;</span>
+
+<span class="w">  </span><span class="cm">&lt;!-- seed a variable, then use it in a template below --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Name&gt;</span>ob.correlationId<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Ref&gt;</span>messageid<span class="nt">&lt;/Ref&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/AssignVariable&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Headers&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Authorization&quot;</span><span class="nt">&gt;</span>Bearer<span class="w"> </span>{private.backend.token}<span class="nt">&lt;/Header&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;X-Correlation-Id&quot;</span><span class="nt">&gt;</span>{ob.correlationId}<span class="nt">&lt;/Header&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/Headers&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;Remove&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Headers&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;x-client-id&quot;</span><span class="nt">/&gt;</span><span class="w">   </span><span class="cm">&lt;!-- don&#39;t leak the northbound client id to the core system --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/Headers&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Remove&gt;</span>
+
+<span class="w">  </span><span class="cm">&lt;!-- run this against the outbound request message --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;request&quot;</span><span class="nt">&gt;</span>request<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<h3 id="reshape-the-response-for-the-client">Reshape the response for the client</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-ClientResponse&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>
+{
+<span class="w">  </span>&quot;accountId&quot;:<span class="w"> </span>&quot;{ob.accountId}&quot;,
+<span class="w">  </span>&quot;amount&quot;:<span class="w"> </span>&quot;{ob.amount}&quot;,
+<span class="w">  </span>&quot;currency&quot;:<span class="w"> </span>&quot;{ob.currency}&quot;,
+<span class="w">  </span>&quot;retrievedAt&quot;:<span class="w"> </span>&quot;{system.timestamp}&quot;
+}
+<span class="w">    </span><span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;response&quot;</span><span class="nt">&gt;</span>response<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<p><code>{ob.accountId}</code> is <strong>message templating</strong> — any <code>{variable}</code> in a payload, header, or path is substituted at runtime. (Deep-dive tomorrow.)</p>
+<h2 id="lab-extract-transform-respond">Lab — extract → transform → respond</h2>
+<ol>
+<li>Add <code>EV-AccountId.xml</code> and <code>AM-ClientResponse.xml</code>.</li>
+<li>Create a conditional flow for <code>GET /accounts/{accountId}/transactions</code> that runs <code>EV-AccountId</code> (Request) then <code>AM-ClientResponse</code> (Response). Use a no-route so you respond from policies:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;GetTransactions&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>MatchesPath<span class="w"> </span>&quot;/accounts/{id}/transactions&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;GET&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;&lt;Step&gt;&lt;Name&gt;</span>EV-AccountId<span class="nt">&lt;/Name&gt;&lt;/Step&gt;&lt;/Request&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Response&gt;&lt;Step&gt;&lt;Name&gt;</span>AM-ClientResponse<span class="nt">&lt;/Name&gt;&lt;/Step&gt;&lt;/Response&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<ol start="3">
+<li>Redeploy and test the extraction:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/accounts/22289/transactions?fromBookingDateTime=2026-01-01&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<span class="c1"># → accountId &quot;22289&quot; pulled from the path appears in the response</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Navigate the <strong>flow variable</strong> namespace.</li>
+<li><strong>ExtractVariables</strong> from path, query, header, and JSON body.</li>
+<li><strong>AssignMessage</strong> with Set/Add/Copy/Remove/AssignVariable to mediate both directions.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Which AssignMessage child adds a header <em>without</em> clobbering an existing one of the same name?</li>
+<li>You need a value from the <strong>response</strong> body — what one element must ExtractVariables include?</li>
+<li>What's the difference between <code>&lt;Set&gt;&lt;Headers&gt;</code> and <code>&lt;Add&gt;&lt;Headers&gt;</code>?</li>
+</ol>
+<p><strong>Next:</strong> Day 08 — when XML policies aren't enough: the <strong>JavaScript policy</strong> and dynamic <strong>message templates</strong>.</p><div class="pager">
+<a class="prev" href="day-06.html">&larr; Day 06</a>
+<a class="next" href="day-08.html">Day 08 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

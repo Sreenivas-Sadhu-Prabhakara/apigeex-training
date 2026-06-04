@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 03 — Build & deploy your first API proxy · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li class="active"><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Proxy Dev &middot; Week 1 &middot; ~50 min</div><h1 id="day-3-build-deploy-your-first-api-proxy">Day 3 — Build &amp; deploy your first API proxy</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll hand-build a reverse-proxy bundle, deploy it to your eval environment, and call it over HTTPS — and you'll be able to name what every file in the bundle does.</p>
+<p><strong>Builds on Day 2:</strong> uses your <code>$ORG</code>, <code>$ENV</code>, <code>$RUNTIME_HOST</code>, and <code>$TOKEN</code>.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>A proxy bundle is just a folder of XML. Once you can read it, the Apigee UI stops being magic — it's an editor over these files. CI/CD (Day 27) ships these folders. So we start from the files, not the UI.</p>
+<h2 id="anatomy-of-a-proxy-bundle">Anatomy of a proxy bundle</h2>
+<p>The minimum viable reverse proxy is three files inside an <code>apiproxy/</code> directory:</p>
+<div class="codehilite"><pre><span></span><code>hello-v1/
+└── apiproxy/
+    ├── hello-v1.xml          # manifest: proxy name + revision
+    ├── proxies/
+    │   └── default.xml       # ProxyEndpoint: the northbound (client) side
+    └── targets/
+        └── default.xml       # TargetEndpoint: the southbound (backend) side
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Object</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hello-v1.xml</code></td>
+<td><code>APIProxy</code></td>
+<td>Names the proxy and its revision</td>
+</tr>
+<tr>
+<td><code>proxies/default.xml</code></td>
+<td><code>ProxyEndpoint</code></td>
+<td>Where clients hit it (<code>BasePath</code>), what flows run, and which target to route to</td>
+</tr>
+<tr>
+<td><code>targets/default.xml</code></td>
+<td><code>TargetEndpoint</code></td>
+<td>The backend URL and its flows</td>
+</tr>
+</tbody>
+</table>
+<h2 id="create-the-bundle">Create the bundle</h2>
+<p>Paste this whole block — it writes all three files:</p>
+<div class="codehilite"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>hello-v1/apiproxy/proxies<span class="w"> </span>hello-v1/apiproxy/targets
+
+cat<span class="w"> </span>&gt;<span class="w"> </span>hello-v1/apiproxy/hello-v1.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;APIProxy revision=&quot;1&quot; name=&quot;hello-v1&quot;&gt;</span>
+<span class="s">  &lt;DisplayName&gt;hello-v1&lt;/DisplayName&gt;</span>
+<span class="s">  &lt;Description&gt;First reverse proxy — fronts the public Apigee mock target.&lt;/Description&gt;</span>
+<span class="s">&lt;/APIProxy&gt;</span>
+<span class="s">XML</span>
+
+cat<span class="w"> </span>&gt;<span class="w"> </span>hello-v1/apiproxy/proxies/default.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;ProxyEndpoint name=&quot;default&quot;&gt;</span>
+<span class="s">  &lt;HTTPProxyConnection&gt;</span>
+<span class="s">    &lt;!-- Clients call:  https://$RUNTIME_HOST/hello-v1  --&gt;</span>
+<span class="s">    &lt;BasePath&gt;/hello-v1&lt;/BasePath&gt;</span>
+<span class="s">  &lt;/HTTPProxyConnection&gt;</span>
+
+<span class="s">  &lt;PreFlow name=&quot;PreFlow&quot;&gt;&lt;Request/&gt;&lt;Response/&gt;&lt;/PreFlow&gt;</span>
+<span class="s">  &lt;Flows/&gt;</span>
+<span class="s">  &lt;PostFlow name=&quot;PostFlow&quot;&gt;&lt;Request/&gt;&lt;Response/&gt;&lt;/PostFlow&gt;</span>
+
+<span class="s">  &lt;RouteRule name=&quot;default&quot;&gt;</span>
+<span class="s">    &lt;TargetEndpoint&gt;default&lt;/TargetEndpoint&gt;</span>
+<span class="s">  &lt;/RouteRule&gt;</span>
+<span class="s">&lt;/ProxyEndpoint&gt;</span>
+<span class="s">XML</span>
+
+cat<span class="w"> </span>&gt;<span class="w"> </span>hello-v1/apiproxy/targets/default.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;TargetEndpoint name=&quot;default&quot;&gt;</span>
+<span class="s">  &lt;PreFlow name=&quot;PreFlow&quot;&gt;&lt;Request/&gt;&lt;Response/&gt;&lt;/PreFlow&gt;</span>
+<span class="s">  &lt;Flows/&gt;</span>
+<span class="s">  &lt;PostFlow name=&quot;PostFlow&quot;&gt;&lt;Request/&gt;&lt;Response/&gt;&lt;/PostFlow&gt;</span>
+
+<span class="s">  &lt;HTTPTargetConnection&gt;</span>
+<span class="s">    &lt;!-- Apigee&#39;s public mock backend; returns &quot;Hello, Guest!&quot; at / --&gt;</span>
+<span class="s">    &lt;URL&gt;https://mocktarget.apigee.com&lt;/URL&gt;</span>
+<span class="s">  &lt;/HTTPTargetConnection&gt;</span>
+<span class="s">&lt;/TargetEndpoint&gt;</span>
+<span class="s">XML</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Bundle created:&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>find<span class="w"> </span>hello-v1<span class="w"> </span>-type<span class="w"> </span>f
+</code></pre></div>
+
+<h3 id="read-the-proxyendpoint">Read the ProxyEndpoint</h3>
+<ul>
+<li><code>BasePath</code> is the path clients use. <code>/hello-v1</code> + whatever they append becomes the request.</li>
+<li><code>PreFlow</code> runs <strong>before</strong> any conditional flow; <code>PostFlow</code> runs <strong>after</strong>. Empty for now — tomorrow you'll fill them.</li>
+<li><code>RouteRule</code> says "send this request to the <code>default</code> TargetEndpoint." A RouteRule with <strong>no</strong> <code>&lt;TargetEndpoint&gt;</code> would mean <em>no backend</em> (a "no-target" proxy that responds entirely from policies).</li>
+</ul>
+<h3 id="read-the-targetendpoint">Read the TargetEndpoint</h3>
+<ul>
+<li><code>URL</code> is the backend. The part of the request path <strong>after</strong> the BasePath is appended automatically. So <code>GET /hello-v1/json</code> → <code>GET https://mocktarget.apigee.com/json</code>.</li>
+</ul>
+<h2 id="deploy-it">Deploy it</h2>
+<div class="codehilite"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>~/.apigee-training.env<span class="w">   </span><span class="c1"># refresh vars; re-run TOKEN export if needed</span>
+
+<span class="c1"># Upload the bundle as revision 1 of an API proxy named &quot;hello-v1&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>hello-v1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--proxy-folder<span class="w"> </span>./hello-v1/apiproxy<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># Deploy that revision to your environment and wait for it to go live</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--rev<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p>The <code>--ovr</code> (override) flag forces the deploy even if another revision is deployed; <code>--wait</code> blocks until the runtime reports the deployment ready.</p>
+</blockquote>
+<h2 id="call-it">Call it</h2>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Root path → mock target returns a greeting</span>
+curl<span class="w"> </span>-i<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1&quot;</span>
+
+<span class="c1"># Append a path → proxied through to the backend&#39;s /json</span>
+curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/json&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</code></pre></div>
+
+<p>You should see a <code>200</code> greeting from the first call and a JSON body from the second. <strong>You just shipped an API.</strong></p>
+<h2 id="lab-make-it-yours">Lab — make it yours</h2>
+<ol>
+<li>Change the <code>BasePath</code> to <code>/echo-v1</code>, re-create as <strong>revision 2</strong> (<code>apigeecli apis create bundle</code> again increments nothing automatically — pass <code>--name hello-v1</code> and it stores a new revision), redeploy, and confirm the old path 404s while the new one works.</li>
+<li>Point the <code>URL</code> at <code>https://mocktarget.apigee.com/user?user=YOURNAME</code> and observe the response change. (Note how query handling differs from path handling — we fix this properly on Day 7.)</li>
+<li>Open the same proxy in the <strong>Apigee UI</strong> (Console → Apigee → Proxy development → API proxies → hello-v1 → <em>Develop</em> tab) and find the exact XML you just wrote.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Author a <strong>3-file reverse proxy bundle</strong> from scratch.</li>
+<li>Explain <code>BasePath</code>, <code>RouteRule</code>, <code>TargetEndpoint</code>, and path pass-through.</li>
+<li><strong>Deploy and call</strong> a proxy via <code>apigeecli</code> + <code>curl</code>.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>What does a RouteRule with no <code>&lt;TargetEndpoint&gt;</code> element produce?</li>
+<li>A client calls <code>/hello-v1/ip</code>. What URL does the backend receive?</li>
+<li>Which file would you edit to change the <strong>backend hostname</strong>?</li>
+</ol>
+<p><strong>Next:</strong> Day 04 — control <em>which</em> logic runs <em>when</em> with PreFlow/PostFlow, conditional flows, and multiple RouteRules.</p><div class="pager">
+<a class="prev" href="day-02.html">&larr; Day 02</a>
+<a class="next" href="day-04.html">Day 04 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

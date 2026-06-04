@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 14 — OAuth 2.0: client credentials & token endpoints · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li class="active"><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Security &middot; Week 3 &middot; ~60 min</div><h1 id="day-14-oauth-20-client-credentials-token-endpoints">Day 14 — OAuth 2.0: client credentials &amp; token endpoints</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll stand up an OAuth <strong>token endpoint</strong> on Apigee with the <strong>OAuthV2</strong> policy, issue tokens via the <strong>client-credentials</strong> grant, and protect a resource proxy with <strong>VerifyAccessToken</strong>.</p>
+<p><strong>Builds on Day 13:</strong> the OAuth <code>client_id</code>/<code>client_secret</code> <em>are</em> the developer app's <code>consumerKey</code>/<code>consumerSecret</code>. Apigee is the authorization server.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>API keys identify an app but travel in the clear and never expire. OAuth 2.0 gives you short-lived, scoped <strong>bearer tokens</strong>. Apigee X can act as the OAuth 2.0 <strong>authorization server</strong> out of the box — no separate IdP required for machine-to-machine. Client credentials is the simplest grant and the backbone of B2B/TPP-to-bank server flows.</p>
+<h2 id="the-oauthv2-policy-one-policy-many-operations">The OAuthV2 policy: one policy, many operations</h2>
+<p><code>OAuthV2</code> does different jobs depending on its <code>&lt;Operation&gt;</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GenerateAccessToken</code></td>
+<td>Token endpoint — mints an access token</td>
+</tr>
+<tr>
+<td><code>VerifyAccessToken</code></td>
+<td>Resource side — validates the bearer token</td>
+</tr>
+<tr>
+<td><code>GenerateAuthorizationCode</code></td>
+<td>Authorize endpoint (Day 15)</td>
+</tr>
+<tr>
+<td><code>RefreshAccessToken</code></td>
+<td>Exchange a refresh token</td>
+</tr>
+<tr>
+<td><code>InvalidateToken</code></td>
+<td>Revoke</td>
+</tr>
+</tbody>
+</table>
+<h2 id="build-the-token-endpoint">Build the token endpoint</h2>
+<p>A proxy (or a flow in your proxy) exposes <code>POST /oauth/token</code>. The grant arrives as form params; OAuthV2 reads them.</p>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/OA-GenerateToken.xml --&gt;</span>
+<span class="nt">&lt;OAuthV2</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;OA-GenerateToken&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>OA-GenerateToken<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Operation&gt;</span>GenerateAccessToken<span class="nt">&lt;/Operation&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- token lifetime: 5 minutes (FAPI likes short tokens) --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpiresIn&gt;</span>300000<span class="nt">&lt;/ExpiresIn&gt;</span>
+<span class="w">  </span><span class="nt">&lt;SupportedGrantTypes&gt;</span>
+<span class="w">    </span><span class="nt">&lt;GrantType&gt;</span>client_credentials<span class="nt">&lt;/GrantType&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/SupportedGrantTypes&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- where to find the grant type --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GrantType&gt;</span>request.formparam.grant_type<span class="nt">&lt;/GrantType&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- echo scopes from the request, validated against the product&#39;s scopes --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Scope&gt;</span>request.queryparam.scope<span class="nt">&lt;/Scope&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GenerateResponse</span><span class="w"> </span><span class="na">enabled=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/OAuthV2&gt;</span>
+</code></pre></div>
+
+<p>Before generating, you must validate the client credentials. Two common patterns:</p>
+<ol>
+<li><strong>VerifyAPIKey-style:</strong> clients send <code>client_id</code>/<code>client_secret</code>; you verify with a small flow.</li>
+<li><strong>Basic auth header:</strong> decode <code>Authorization: Basic ...</code> then verify.</li>
+</ol>
+<p>A clean approach uses a dedicated credential check before <code>GenerateAccessToken</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/OA-VerifyClient.xml : confirm client_id+secret belong to a real app --&gt;</span>
+<span class="nt">&lt;OAuthV2</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;OA-VerifyClient&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Operation&gt;</span>GenerateAccessToken<span class="nt">&lt;/Operation&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpiresIn&gt;</span>300000<span class="nt">&lt;/ExpiresIn&gt;</span>
+<span class="w">  </span><span class="nt">&lt;SupportedGrantTypes&gt;&lt;GrantType&gt;</span>client_credentials<span class="nt">&lt;/GrantType&gt;&lt;/SupportedGrantTypes&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GrantType&gt;</span>request.formparam.grant_type<span class="nt">&lt;/GrantType&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ClientId&gt;</span>request.formparam.client_id<span class="nt">&lt;/ClientId&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GenerateResponse</span><span class="w"> </span><span class="na">enabled=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/OAuthV2&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Apigee validates that the <code>client_id</code> (+ secret) maps to a developer app whose product grants the requested scopes. Scope enforcement is automatic when scopes are defined on the product (Day 13).</p>
+</blockquote>
+<h3 id="the-token-flow">The token flow</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Token&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/oauth/token&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-GenerateToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Set the RouteRule so <code>/oauth/token</code> has <strong>no</strong> TargetEndpoint — <code>GenerateResponse</code> builds the JSON token response itself.</p>
+</blockquote>
+<h2 id="protect-a-resource-with-verifyaccesstoken">Protect a resource with VerifyAccessToken</h2>
+<p>On the AISP proxy, replace (or add to) VerifyAPIKey with token verification:</p>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/OA-VerifyToken.xml --&gt;</span>
+<span class="nt">&lt;OAuthV2</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;OA-VerifyToken&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Operation&gt;</span>VerifyAccessToken<span class="nt">&lt;/Operation&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- require a scope for this operation --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Scope&gt;</span>accounts<span class="nt">&lt;/Scope&gt;</span>
+<span class="nt">&lt;/OAuthV2&gt;</span>
+</code></pre></div>
+
+<p>On success you get <code>oauth_access_token</code>, <code>apiproduct.name</code>, <code>developer.app.name</code>, <code>scope</code>, and any custom claims — same rich context as VerifyAPIKey, now token-based.</p>
+<h2 id="lab-issue-and-use-a-token">Lab — issue and use a token</h2>
+<ol>
+<li>Add the token flow + policies to a small <code>oauth-v1</code> proxy (or your AISP proxy), and <code>OA-VerifyToken</code> on <code>/accounts</code>.</li>
+<li>Deploy, then run the full handshake:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="nv">CK</span><span class="o">=</span><span class="s2">&quot;&lt;consumerKey&gt;&quot;</span><span class="p">;</span><span class="w"> </span><span class="nv">CS</span><span class="o">=</span><span class="s2">&quot;&lt;consumerSecret&gt;&quot;</span>
+
+<span class="c1"># 1) get a token (client credentials)</span>
+<span class="nv">TOKEN_JSON</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/oauth-v1/oauth/token?scope=accounts&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/x-www-form-urlencoded&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=client_credentials&amp;client_id=</span><span class="nv">$CK</span><span class="s2">&amp;client_secret=</span><span class="nv">$CS</span><span class="s2">&quot;</span><span class="k">)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN_JSON</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<span class="nv">AT</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN_JSON</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span>.access_token<span class="k">)</span>
+
+<span class="c1"># 2) call a protected resource with the bearer token</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$AT</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/accounts&quot;</span>
+
+<span class="c1"># 3) wrong/expired token → 401</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer not-a-token&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/accounts&quot;</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Run an OAuth 2.0 <strong>token endpoint</strong> on Apigee with <code>GenerateAccessToken</code>.</li>
+<li>Issue tokens via <strong>client credentials</strong> tied to a developer app.</li>
+<li>Protect resources with <strong>VerifyAccessToken</strong> and scope checks.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>What Apigee objects back the OAuth <code>client_id</code> and <code>client_secret</code>?</li>
+<li>Why does the <code>/oauth/token</code> flow use a <strong>no-route</strong> RouteRule?</li>
+<li>Where do the <em>scopes</em> a token may request actually come from?</li>
+</ol>
+<p><strong>Next:</strong> Day 15 — the user-present flow: <strong>authorization code + PKCE</strong>, and minting/verifying <strong>JWTs</strong>.</p><div class="pager">
+<a class="prev" href="day-13.html">&larr; Day 13</a>
+<a class="next" href="day-15.html">Day 15 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

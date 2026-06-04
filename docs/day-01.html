@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 01 — Apigee X: the platform & architecture · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li class="active"><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Foundations &middot; Week 1 &middot; ~45 min</div><h1 id="day-1-apigee-x-the-platform-architecture">Day 1 — Apigee X: the platform &amp; architecture</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> Apigee X is a fully-managed API management platform that runs on Google Cloud. By the end of today you can draw the request path from a caller to your backend and name every object it passes through.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>For the next 29 days you will create <em>proxies</em>, attach <em>policies</em>, and deploy to <em>environments</em>. None of that makes sense until you can place each object in the architecture. Banking teams especially need this mental model, because the security boundary (where TLS terminates, where tokens are checked) maps directly onto these components.</p>
+<h2 id="the-two-planes">The two planes</h2>
+<p>Apigee X cleanly separates <strong>management</strong> from <strong>traffic</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Plane</th>
+<th>What lives here</th>
+<th>Who touches it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Control plane</strong></td>
+<td>Where you design proxies, define products, configure environments. Google-managed, multi-tenant. Reached via the Apigee UI and the Apigee API.</td>
+<td>Developers, operators, CI/CD</td>
+</tr>
+<tr>
+<td><strong>Runtime plane</strong></td>
+<td>The <em>instances</em> that actually process API calls in a GCP region. Single-tenant, in your project's network.</td>
+<td>End-user / app traffic</td>
+</tr>
+</tbody>
+</table>
+<p>You <strong>deploy</strong> an artifact in the control plane; it is <strong>distributed</strong> to the runtime plane and executed there. This is why a deploy is not instant and why "deployed" and "saved" are different states.</p>
+<h2 id="the-data-model-memorize-this-hierarchy">The data model (memorize this hierarchy)</h2>
+<div class="codehilite"><pre><span></span><code>GCP Project (1:1)
+└── Organization (your Apigee &quot;org&quot;)
+    ├── Environments        e.g. eval, test, prod
+    │   └── deployed API proxy revisions
+    ├── Environment Groups  e.g. ob-uk-group  → hostnames (api.bank.example)
+    ├── Instances           regional runtime (europe-west2, ...)
+    ├── API Products        bundles of proxy operations sold/granted as a unit
+    ├── Developers &amp; Apps   identities that get credentials
+    └── Shared Flows / KVMs / Keystores / TargetServers (shared config)
+</code></pre></div>
+
+<p>Key facts that trip people up:</p>
+<ul>
+<li>An <strong>organization is bound 1:1 to a GCP project</strong> and is named after it. You do not "create many orgs" casually.</li>
+<li>A proxy is <strong>deployed to an environment</strong>, not to the org. The same proxy can run in <code>test</code> and <code>prod</code> with different config.</li>
+<li><strong>Environment groups</strong> attach <strong>hostnames</strong>. A request reaches an environment because its <code>Host</code> header matches a hostname routed to a group that contains that environment.</li>
+<li><strong>Instances</strong> are the regional runtimes. For UK Open Banking you'll typically pick <code>europe-west2</code> (London) for data residency.</li>
+</ul>
+<h2 id="how-a-request-flows">How a request flows</h2>
+<div class="codehilite"><pre><span></span><code>Client app
+  │  HTTPS  (northbound TLS)
+  ▼
+Google Front End / Load Balancer  ── matches Host header → Environment Group
+  ▼
+Apigee runtime instance (region)
+  ▼  ProxyEndpoint  → policies (request flow)
+  ▼  TargetEndpoint → policies → backend call (southbound TLS)
+  ▼
+Backend / system of record (core banking, ledger, ...)
+  ▲  response flows run on the way back
+</code></pre></div>
+
+<p>Two terms you'll hear constantly:</p>
+<ul>
+<li><strong>Northbound</strong> = the client-facing edge (app → Apigee).</li>
+<li><strong>Southbound</strong> = the backend-facing edge (Apigee → your service).</li>
+</ul>
+<p>In Open Banking, the <em>northbound</em> edge is where FAPI and mutual TLS live; the <em>southbound</em> edge is where you authenticate to the core banking system.</p>
+<h2 id="apigee-x-vs-edge-vs-hybrid-one-paragraph">Apigee X vs Edge vs hybrid (one paragraph)</h2>
+<p>You may meet three flavors. <strong>Apigee Edge</strong> is the older generation (often SaaS, "classic"). <strong>Apigee X</strong> is the current Google-Cloud-native managed product — <em>this course targets X</em>. <strong>Apigee hybrid</strong> runs the same runtime in your own Kubernetes (GKE/anywhere) for data-sovereignty cases, with the control plane still in Google Cloud. The proxy and policy concepts you learn here apply to all three; only provisioning and networking differ.</p>
+<h2 id="lab-map-it-yourself">Lab — map it yourself</h2>
+<p>You don't have an org yet (that's Day 2), but you can still anchor the model:</p>
+<ol>
+<li>On paper or in a comment block, draw the flow from <strong>a TPP's mobile app</strong> → <strong>your bank's <code>/accounts</code> API</strong> → <strong>core banking</strong>. Label where northbound TLS terminates and where you'd check an access token.</li>
+<li>Decide, for a UK bank, which <strong>region</strong> your instance should live in and <strong>why</strong> (hint: data residency + latency to London).</li>
+<li>List which objects are <strong>shared across environments</strong> (proxies as artifacts, shared flows) versus <strong>per-environment</strong> (deployments, KVM <em>values</em>, hostnames).</li>
+</ol>
+<div class="codehilite"><pre><span></span><code># Sample answer to step 3
+Shared artifact (one definition):      proxy bundle, shared flow, API product
+Per-environment (differs test/prod):   which revision is deployed,
+                                        KVM/property-set values, target URLs,
+                                        hostnames via environment groups
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Name the <strong>control plane</strong> vs <strong>runtime plane</strong> and why deploys aren't instant.</li>
+<li>Place <strong>org → environment → env group → instance</strong> in a hierarchy.</li>
+<li>Explain <strong>northbound vs southbound</strong> and where security boundaries fall.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>A request returns <code>404</code> with no matching proxy. Which object's misconfiguration most likely caused it — the proxy, or the <strong>environment group hostname</strong>?</li>
+<li>True/false: deploying a proxy to <code>prod</code> automatically deploys it to <code>test</code>.</li>
+<li>Where does <strong>mutual TLS</strong> for a TPP terminate — northbound or southbound?</li>
+</ol>
+<p><strong>Next:</strong> Day 02 — we stop drawing and actually provision a working Apigee X org plus the CLI tools you'll use for the rest of the course.</p><div class="pager">
+<a class="prev" href="index.html">&larr; Overview</a>
+<a class="next" href="day-02.html">Day 02 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

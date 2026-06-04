@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 08 — Transformation with JavaScript & message templates · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li class="active"><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Mediation &middot; Week 2 &middot; ~55 min</div><h1 id="day-8-transformation-with-javascript-message-templates">Day 8 — Transformation with JavaScript &amp; message templates</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll write a <strong>JavaScript policy</strong> for logic the XML policies can't express, and use <strong>message templates</strong> for dynamic strings — and you'll know when <em>not</em> to reach for JavaScript.</p>
+<p><strong>Builds on Day 7:</strong> JavaScript reads and writes the same flow variables ExtractVariables/AssignMessage use.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Most mediation should be declarative (AssignMessage/ExtractVariables) — it's faster and safer. But some logic is genuinely procedural: building an OB-format error object, computing a hash, looping over an array of accounts. That's the JavaScript policy's job.</p>
+<blockquote>
+<p><strong>Rule of thumb:</strong> reach for JavaScript only when a declarative policy can't do it. JS runs in a sandbox, costs more CPU, and is harder to trace. Never put secrets or crypto you can avoid in JS — use dedicated policies (GenerateJWT on Day 15, HMAC, etc.).</p>
+</blockquote>
+<h2 id="the-javascript-policy">The JavaScript policy</h2>
+<p>Two parts: the policy XML (which names a resource file) and the resource file under <code>apiproxy/resources/jsc/</code>.</p>
+<div class="codehilite"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>hello-v1/apiproxy/resources/jsc
+
+cat<span class="w"> </span>&gt;<span class="w"> </span>hello-v1/apiproxy/policies/JS-BuildOBError.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;Javascript name=&quot;JS-BuildOBError&quot; timeLimit=&quot;200&quot;&gt;</span>
+<span class="s">  &lt;DisplayName&gt;JS-BuildOBError&lt;/DisplayName&gt;</span>
+<span class="s">  &lt;ResourceURL&gt;jsc://buildOBError.js&lt;/ResourceURL&gt;</span>
+<span class="s">  &lt;!-- properties are readable inside the script via properties.NAME --&gt;</span>
+<span class="s">  &lt;Properties&gt;</span>
+<span class="s">    &lt;Property name=&quot;defaultCode&quot;&gt;UK.OBIE.Field.Invalid&lt;/Property&gt;</span>
+<span class="s">  &lt;/Properties&gt;</span>
+<span class="s">&lt;/Javascript&gt;</span>
+<span class="s">XML</span>
+</code></pre></div>
+
+<p>The script — note the <code>context</code>, <code>request</code>, <code>response</code> globals Apigee injects:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// resources/jsc/buildOBError.js</span>
+<span class="c1">// Build an OBIE-style error envelope from flow variables.</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;error.obie.code&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">properties</span><span class="p">.</span><span class="nx">defaultCode</span><span class="p">;</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;error.obie.message&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;The request is invalid.&#39;</span><span class="p">;</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">interactionId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;request.header.x-fapi-interaction-id&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+
+<span class="kd">var</span><span class="w"> </span><span class="nx">body</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">Code</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;400 BadRequest&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">Id</span><span class="o">:</span><span class="w"> </span><span class="nx">interactionId</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">Message</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;The request failed validation.&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">Errors</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">ErrorCode</span><span class="o">:</span><span class="w"> </span><span class="nx">code</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">Message</span><span class="o">:</span><span class="w"> </span><span class="nx">message</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">};</span>
+
+<span class="c1">// write the response the client will receive</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;response.content&#39;</span><span class="p">,</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">body</span><span class="p">));</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;response.header.Content-Type&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;application/json&#39;</span><span class="p">);</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;response.status.code&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">400</span><span class="p">);</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;response.reason.phrase&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Bad Request&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>The bridge is <code>context.getVariable</code> / <code>context.setVariable</code>.</strong> Anything you set is visible to later policies; anything earlier policies set is readable here. That's how JS composes with the declarative world.</p>
+</blockquote>
+<h2 id="message-templates-no-javascript-needed">Message templates (no JavaScript needed)</h2>
+<p>A <em>message template</em> is any string with <code>{variable}</code> references, used in <code>&lt;Header&gt;</code>, <code>&lt;Payload&gt;</code>, <code>&lt;Path&gt;</code>, <code>&lt;AssignVariable&gt;&lt;Template&gt;</code>, etc. They support functions and defaults:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-Templated&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Name&gt;</span>ob.idempotencyKey<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="cm">&lt;!-- default value if the source variable is empty --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Template&gt;</span>{request.header.x-idempotency-key}<span class="nt">&lt;/Template&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Value&gt;</span>auto-{messageid}<span class="nt">&lt;/Value&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/AssignVariable&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Headers&gt;</span>
+<span class="w">      </span><span class="cm">&lt;!-- built-in template functions: createUuid(), toUpperCase(), substring() ... --&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;X-Trace-Id&quot;</span><span class="nt">&gt;</span>{createUuid()}<span class="nt">&lt;/Header&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;X-Account-Upper&quot;</span><span class="nt">&gt;</span>{toUpperCase(ob.accountId)}<span class="nt">&lt;/Header&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/Headers&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Path&gt;</span>/v3.1/aisp/accounts/{ob.accountId}<span class="nt">&lt;/Path&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;request&quot;</span><span class="nt">&gt;</span>request<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<p>Useful template functions: <code>createUuid()</code>, <code>toUpperCase()</code>, <code>toLowerCase()</code>, <code>substring()</code>, <code>xPath()</code>, <code>jsonPath()</code>, <code>timeFormatUTC()</code>, <code>escapeJSON()</code>, <code>encodeBase64()</code>. Prefer these over a JS policy for one-liners.</p>
+<h2 id="lab-declarative-first-js-only-where-needed">Lab — declarative first, JS only where needed</h2>
+<ol>
+<li>Add the message-template <code>AM-Templated</code> policy and confirm <code>X-Trace-Id</code> is a fresh UUID each call. (Pure template — no JS.)</li>
+<li>Add <code>JS-BuildOBError</code> + <code>buildOBError.js</code>. Wire a flow that sets <code>error.obie.message</code> then runs the JS, returning the OB error envelope:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;DemoError&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/boom&quot;<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-BuildOBError<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<ol start="3">
+<li>Redeploy and test:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--proxy-folder<span class="w"> </span>./hello-v1/apiproxy<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--rev<span class="w"> </span><span class="m">5</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/boom&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<span class="c1"># → a well-formed OBIE error envelope, status 400</span>
+</code></pre></div>
+
+<ol start="4">
+<li><strong>Refactor challenge:</strong> rewrite the <code>X-Account-Upper</code> header to <em>not</em> use JS (you already did — it's a template). Internalize that most "I need JavaScript" instincts are actually a template or an AssignMessage.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Write a <strong>JavaScript policy</strong> that reads/writes flow variables via <code>context</code>.</li>
+<li>Use <strong>message templates</strong> and built-in functions for dynamic strings without code.</li>
+<li>Apply the <strong>declarative-first</strong> rule and keep JS for genuinely procedural logic.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>How does a JavaScript policy pass a value to a downstream AssignMessage?</li>
+<li>Name two things you should <em>not</em> do in a JS policy.</li>
+<li>You need a fresh UUID header — JS or template?</li>
+</ol>
+<p><strong>Next:</strong> Day 09 — call a <em>second</em> service mid-flow with <strong>ServiceCallout</strong>, and stop hard-coding backend hosts using <strong>TargetServers</strong>.</p><div class="pager">
+<a class="prev" href="day-07.html">&larr; Day 07</a>
+<a class="next" href="day-09.html">Day 09 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 27 — CI/CD & config-as-code with apigeecli · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li class="active"><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Operations &middot; Week 5 &middot; ~70 min</div><h1 id="day-27-cicd-config-as-code-with-apigeecli">Day 27 — CI/CD &amp; config-as-code with apigeecli</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll put your proxy bundles in Git and build a <strong>GitHub Actions pipeline</strong> that lints, deploys to <code>test</code>, runs API tests, and promotes the same revision to <code>prod</code> — config-as-code, no clicking.</p>
+<p><strong>Builds on Day 26:</strong> automation just scripts the promotion model you did by hand yesterday.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Banks need auditable, repeatable, four-eyes deployments. A proxy that's edited in the UI has no review, no history, no rollback. Config-as-code makes every change a reviewed PR and every deploy a logged pipeline run — table stakes for a regulated environment.</p>
+<h2 id="repository-layout">Repository layout</h2>
+<p>Treat proxies, shared flows, and environment config as source:</p>
+<div class="codehilite"><pre><span></span><code>repo/
+├── apiproxies/
+│   ├── ob-aisp/apiproxy/...
+│   └── ob-pisp/apiproxy/...
+├── sharedflows/
+│   └── sf-fapi-inbound/sharedflowbundle/...
+├── config/
+│   ├── test/{kvms.json,targetservers.json,products.json}
+│   └── prod/{kvms.json,targetservers.json,products.json}
+├── tests/
+│   └── ob-aisp.apickli.feature        # or postman/newman collection
+└── .github/workflows/deploy.yml
+</code></pre></div>
+
+<blockquote>
+<p><strong>Config is environment-scoped JSON in Git</strong> — the <em>values</em> differ per env, the <em>structure</em> is reviewed. apigeecli can apply these declaratively, so a backend host change is a PR, not a console edit.</p>
+</blockquote>
+<h2 id="authenticate-the-pipeline-workload-identity-federation">Authenticate the pipeline (Workload Identity Federation)</h2>
+<p>Don't put a service-account key in GitHub. Use <strong>Workload Identity Federation</strong> so the Actions runner exchanges its OIDC token for short-lived GCP creds:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># .github/workflows/deploy.yml (excerpt) — keyless auth</span>
+<span class="nt">permissions</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">contents</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">read</span>
+<span class="w">  </span><span class="nt">id-token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span><span class="w">          </span><span class="c1"># required for OIDC → GCP</span>
+
+<span class="nt">steps</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v4</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auth</span>
+<span class="w">    </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google-github-actions/auth@v2</span>
+<span class="w">    </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">workload_identity_provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">projects/123/locations/global/workloadIdentityPools/gh/providers/gh</span>
+<span class="w">      </span><span class="nt">service_account</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apigee-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google-github-actions/setup-gcloud@v2</span>
+</code></pre></div>
+
+<h2 id="the-pipeline">The pipeline</h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deploy-apigee</span>
+<span class="nt">on</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pull_request</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">main</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">     </span><span class="c1"># validate on PR</span>
+<span class="w">  </span><span class="nt">push</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">main</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">             </span><span class="c1"># deploy on merge</span>
+
+<span class="nt">env</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ORG</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-apigee-training</span>
+<span class="w">  </span><span class="nt">PROJECT_ID</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-apigee-training</span>
+
+<span class="nt">jobs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">build-test-deploy</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">permissions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> contents</span><span class="p">:</span><span class="w"> </span><span class="nv">read</span><span class="p p-Indicator">,</span><span class="nt"> id-token</span><span class="p">:</span><span class="w"> </span><span class="nv">write</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v4</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auth</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google-github-actions/auth@v2</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">workload_identity_provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.WIF_PROVIDER }}</span>
+<span class="w">          </span><span class="nt">service_account</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.WIF_SA }}</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google-github-actions/setup-gcloud@v2</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install apigeecli</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">curl -L https://raw.githubusercontent.com/apigee/apigeecli/main/downloadLatest.sh | sh -</span>
+<span class="w">          </span><span class="no">echo &quot;$HOME/.apigeecli/bin&quot; &gt;&gt; &quot;$GITHUB_PATH&quot;</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Token</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">echo &quot;TOKEN=$(gcloud auth print-access-token)&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;</span>
+
+<span class="w">      </span><span class="c1"># 1) Lint / static checks (apigeelint catches anti-patterns)</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Lint proxies</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">npm i -g apigeelint</span>
+<span class="w">          </span><span class="no">apigeelint -s apiproxies/ob-aisp/apiproxy -f table</span>
+
+<span class="w">      </span><span class="c1"># 2) Deploy the bundle to TEST as a new revision</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deploy to test</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">apigeecli apis create bundle --name ob-aisp \</span>
+<span class="w">            </span><span class="no">--proxy-folder apiproxies/ob-aisp/apiproxy --org &quot;$ORG&quot; --token &quot;$TOKEN&quot;</span>
+<span class="w">          </span><span class="no">REV=$(apigeecli apis deploy --name ob-aisp --org &quot;$ORG&quot; --env test \</span>
+<span class="w">            </span><span class="no">--ovr --wait --token &quot;$TOKEN&quot; | jq -r &#39;.revision&#39;)</span>
+<span class="w">          </span><span class="no">echo &quot;REV=$REV&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;</span>
+
+<span class="w">      </span><span class="c1"># 3) Integration tests against the test hostname</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">API tests</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">npm i -g newman</span>
+<span class="w">          </span><span class="no">newman run tests/ob-aisp.postman_collection.json \</span>
+<span class="w">            </span><span class="no">--env-var &quot;baseUrl=https://api-test.demobank.example&quot;</span>
+
+<span class="w">      </span><span class="c1"># 4) Promote the SAME revision to PROD (only on main, gated by environment approval)</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Promote to prod</span>
+<span class="w">        </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.ref == &#39;refs/heads/main&#39;</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">apigeecli apis deploy --name ob-aisp --rev &quot;$REV&quot; \</span>
+<span class="w">            </span><span class="no">--org &quot;$ORG&quot; --env prod --ovr --wait --token &quot;$TOKEN&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Use a GitHub <strong>Environment</strong> named <code>prod</code> with required reviewers to enforce <strong>four-eyes approval</strong> before the promote step runs. That's your change-control gate.</p>
+</blockquote>
+<h2 id="api-tests-apickli-newman">API tests (apickli / newman)</h2>
+<p>A minimal contract test for the AISP consent guard, in apickli (Cucumber) style:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">Feature:</span><span class="nf"> AISP consent enforcement</span>
+<span class="nf">  </span><span class="k">Scenario:</span><span class="nf"> reject data access without an Authorised consent</span>
+<span class="k">    Given </span><span class="nf">I set Authorization header to Bearer </span><span class="nv">&lt;unauthorised-token&gt;</span>
+<span class="nf">    </span><span class="k">And </span><span class="nf">I set x-fapi-interaction-id header to a-uuid</span>
+<span class="nf">    </span><span class="k">When </span><span class="nf">I GET /open-banking/v</span><span class="s">3.1</span><span class="nf">/aisp/accounts</span>
+<span class="nf">    </span><span class="k">Then </span><span class="nf">response code should be </span><span class="s">403</span>
+<span class="nf">    </span><span class="k">And </span><span class="nf">response body path $.Errors[</span><span class="s">0</span><span class="nf">].ErrorCode should be UK.OBIE.Resource.InvalidConsentStatus</span>
+</code></pre></div>
+
+<h2 id="config-as-code-apply">Config-as-code apply</h2>
+<p>Sync environment config declaratively so config drift is impossible:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># apply per-environment KVMs/targetservers/products from versioned JSON</span>
+apigeecli<span class="w"> </span>kvms<span class="w"> </span>import<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-f<span class="w"> </span>config/test/kvms.json<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>targetservers<span class="w"> </span>import<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-f<span class="w"> </span>config/test/targetservers.json<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>products<span class="w"> </span>import<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>-f<span class="w"> </span>config/products.json<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="lab-pipeline-your-aisp-proxy">Lab — pipeline your AISP proxy</h2>
+<ol>
+<li>Put <code>ob-aisp</code> and its tests in a repo; add the workflow.</li>
+<li>Open a PR → confirm lint + test run but <strong>no</strong> prod deploy.</li>
+<li>Merge → confirm deploy-to-test, tests, then a <strong>gated</strong> promote-to-prod requiring approval.</li>
+<li>Break a test on purpose (e.g. expect <code>200</code> where consent should give <code>403</code>) and confirm the pipeline <strong>blocks</strong> promotion.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Store proxies, shared flows, and env config as <strong>versioned source</strong>.</li>
+<li>Build a <strong>GitHub Actions</strong> pipeline: lint → deploy-test → test → gated promote-prod.</li>
+<li>Authenticate keylessly with <strong>Workload Identity Federation</strong> and enforce <strong>four-eyes</strong> approval.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why promote the <em>same revision</em> rather than re-running <code>create bundle</code> for prod?</li>
+<li>What does Workload Identity Federation remove from your CI secrets?</li>
+<li>Where do you enforce a human approval before production deploys?</li>
+</ol>
+<p><strong>Next:</strong> Day 28 — see what your live APIs are doing: <strong>analytics, Cloud Logging, distributed tracing, and Debug sessions</strong>.</p><div class="pager">
+<a class="prev" href="day-26.html">&larr; Day 26</a>
+<a class="next" href="day-28.html">Day 28 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

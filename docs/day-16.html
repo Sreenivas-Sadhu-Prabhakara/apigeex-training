@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 16 — Transport security: TLS, mTLS & keystores · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li class="active"><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Security &middot; Week 3 &middot; ~60 min</div><h1 id="day-16-transport-security-tls-mtls-keystores">Day 16 — Transport security: TLS, mTLS &amp; keystores</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll secure both edges of a proxy — <strong>one-way TLS</strong> for clients and <strong>mutual TLS (mTLS)</strong> for both the TPP→Apigee and Apigee→backend connections — using <strong>keystores</strong> and <strong>truststores</strong>, and expose the client cert for FAPI binding.</p>
+<p><strong>Builds on Day 15:</strong> the private keys you referenced (<code>private.signing.key</code>) live in keystores; mTLS is a hard FAPI requirement (Day 18).</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>FAPI 1.0 Advanced <strong>requires mutual TLS</strong> between the TPP and the bank, and Open Banking binds tokens to the client's transport certificate. You also need southbound mTLS to authenticate Apigee to the core banking system. Getting keystores right is non-negotiable in banking.</p>
+<h2 id="the-four-directions-of-transport-security">The four directions of transport security</h2>
+<div class="codehilite"><pre><span></span><code>        northbound                         southbound
+TPP ───────────────► Apigee ───────────────► Core banking
+   (1) server TLS: Apigee presents a cert   (3) server TLS: backend presents a cert
+   (2) client mTLS: TPP presents a cert     (4) client mTLS: Apigee presents a cert
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Direction</th>
+<th>Who presents a cert</th>
+<th>Apigee object</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Apigee → TPP</td>
+<td>Apigee (server)</td>
+<td>Managed by Google front end + your env-group hostname cert</td>
+</tr>
+<tr>
+<td>2</td>
+<td>TPP → Apigee</td>
+<td>TPP (client)</td>
+<td>mTLS via the <strong>runtime/ingress</strong>; cert surfaced as a header/var</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Backend → Apigee</td>
+<td>Backend (server)</td>
+<td><strong>Truststore</strong> on the TargetEndpoint (validate backend cert)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Apigee → Backend</td>
+<td>Apigee (client)</td>
+<td><strong>Keystore</strong> on the TargetEndpoint (present client cert)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="keystores-truststores">Keystores &amp; truststores</h2>
+<ul>
+<li>A <strong>keystore</strong> holds <em>your</em> cert + private key (what you present).</li>
+<li>A <strong>truststore</strong> holds the CA/leaf certs you <em>trust</em> (what you validate the other side against).</li>
+</ul>
+<p>Create a keystore and load a cert+key (southbound client identity for mTLS to the core):</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1) create a keystore in the environment</span>
+apigeecli<span class="w"> </span>keystores<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>core-mtls<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># 2) generate a demo key pair + CSR (in prod: use your real CA-issued cert)</span>
+openssl<span class="w"> </span>req<span class="w"> </span>-newkey<span class="w"> </span>rsa:2048<span class="w"> </span>-nodes<span class="w"> </span>-keyout<span class="w"> </span>apigee-client.key<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-x509<span class="w"> </span>-days<span class="w"> </span><span class="m">365</span><span class="w"> </span>-out<span class="w"> </span>apigee-client.crt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-subj<span class="w"> </span><span class="s2">&quot;/C=GB/O=Demo Bank/CN=apigee-client&quot;</span>
+
+<span class="c1"># 3) upload as a key alias (cert + private key)</span>
+apigeecli<span class="w"> </span>keyaliases<span class="w"> </span>create<span class="w"> </span>--keystore<span class="w"> </span>core-mtls<span class="w"> </span>--name<span class="w"> </span>client-alias<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--format<span class="w"> </span>keycertfile<span class="w"> </span>--cert<span class="w"> </span>./apigee-client.crt<span class="w"> </span>--key<span class="w"> </span>./apigee-client.key<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># 4) a truststore holding the backend&#39;s CA, so we validate the backend&#39;s server cert</span>
+apigeecli<span class="w"> </span>keystores<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>core-truststore<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>keyaliases<span class="w"> </span>create<span class="w"> </span>--keystore<span class="w"> </span>core-truststore<span class="w"> </span>--name<span class="w"> </span>backend-ca<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--format<span class="w"> </span>keycertfile<span class="w"> </span>--cert<span class="w"> </span>./backend-ca.crt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="southbound-mtls-on-the-targetendpoint">Southbound mTLS on the TargetEndpoint</h2>
+<p>Wire the keystore (client identity) and truststore (validate backend) into the TargetEndpoint's <code>&lt;SSLInfo&gt;</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;TargetEndpoint</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;default&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;HTTPTargetConnection&gt;</span>
+<span class="w">    </span><span class="nt">&lt;LoadBalancer&gt;&lt;Server</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;core-banking&quot;</span><span class="nt">/&gt;&lt;/LoadBalancer&gt;</span>
+<span class="w">    </span><span class="nt">&lt;SSLInfo&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Enabled&gt;</span>true<span class="nt">&lt;/Enabled&gt;</span>
+<span class="w">      </span><span class="nt">&lt;ClientAuthEnabled&gt;</span>true<span class="nt">&lt;/ClientAuthEnabled&gt;</span><span class="w">        </span><span class="cm">&lt;!-- present our client cert --&gt;</span>
+<span class="w">      </span><span class="nt">&lt;KeyStore&gt;</span>ref://core-mtls-ref<span class="nt">&lt;/KeyStore&gt;</span>
+<span class="w">      </span><span class="nt">&lt;KeyAlias&gt;</span>client-alias<span class="nt">&lt;/KeyAlias&gt;</span>
+<span class="w">      </span><span class="nt">&lt;TrustStore&gt;</span>ref://core-truststore-ref<span class="nt">&lt;/TrustStore&gt;</span><span class="w"> </span><span class="cm">&lt;!-- validate backend cert --&gt;</span>
+<span class="w">      </span><span class="nt">&lt;IgnoreValidationErrors&gt;</span>false<span class="nt">&lt;/IgnoreValidationErrors&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/SSLInfo&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/HTTPTargetConnection&gt;</span>
+<span class="nt">&lt;/TargetEndpoint&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Use references, not literal keystore names.</strong> A <strong>reference</strong> (<code>ref://core-mtls-ref</code>) is a pointer you can repoint to a new keystore (e.g. after cert rotation) <strong>without redeploying</strong> the proxy. Create one with <code>apigeecli references create --name core-mtls-ref --refers core-mtls --restype KeyStore ...</code>. This is how banks rotate certs with zero downtime.</p>
+</blockquote>
+<h2 id="northbound-mtls-tpp-apigee">Northbound mTLS (TPP → Apigee)</h2>
+<p>Client mTLS at the ingress is configured on the Apigee X <strong>runtime/load-balancer</strong> (the env-group hostname's TLS), not inside the proxy bundle. Once enabled, the TPP's client certificate is surfaced to your proxy as variables/headers so policies can use it — most importantly for <strong>certificate-bound tokens</strong> (Day 24):</p>
+<div class="codehilite"><pre><span></span><code>tls.client.certificate.subject.dn      ← the TPP cert subject
+tls.client.certificate.fingerprint     ← used to bind the token (cnf / x5t#S256)
+client.ssl.client.s.dn / ...i.dn       ← subject / issuer DNs
+</code></pre></div>
+
+<p>A common pattern: validate the cert thumbprint against the token's <code>cnf</code> claim:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;RaiseFault</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;RF-CertMismatch&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>tls.client.certificate.fingerprint<span class="w"> </span>!=<span class="w"> </span>accesstoken.cnf.x5t<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;FaultResponse&gt;&lt;Set&gt;&lt;StatusCode&gt;</span>401<span class="nt">&lt;/StatusCode&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>{&quot;error&quot;:&quot;invalid_token&quot;,&quot;error_description&quot;:&quot;certificate-bound<span class="w"> </span>token<span class="w"> </span>mismatch&quot;}<span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;&lt;/FaultResponse&gt;</span>
+<span class="nt">&lt;/RaiseFault&gt;</span>
+</code></pre></div>
+
+<h2 id="lab-southbound-mtls-a-reference">Lab — southbound mTLS + a reference</h2>
+<ol>
+<li>Create <code>core-mtls</code> keystore + <code>client-alias</code>, and a <code>core-mtls-ref</code> reference pointing at it.</li>
+<li>Add <code>&lt;SSLInfo&gt;</code> to your AISP proxy's TargetEndpoint using the reference.</li>
+<li>Rotate: create <code>core-mtls-v2</code>, upload a new alias, then <code>apigeecli references update --name core-mtls-ref --refers core-mtls-v2 ...</code> — confirm traffic keeps flowing with <strong>no redeploy</strong>.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>references<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>core-mtls-ref<span class="w"> </span>--refers<span class="w"> </span>core-mtls<span class="w"> </span>--restype<span class="w"> </span>KeyStore<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Map the <strong>four directions</strong> of transport security around a proxy.</li>
+<li>Create <strong>keystores/truststores</strong>, load key aliases, and wire <strong>southbound mTLS</strong> with <code>&lt;SSLInfo&gt;</code>.</li>
+<li>Use <strong>references</strong> for zero-downtime cert rotation.</li>
+<li>Read the <strong>TPP client certificate</strong> variables for FAPI token binding.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Keystore vs truststore — which holds <em>your</em> private key?</li>
+<li>Why reference a keystore via <code>ref://</code> instead of naming it directly?</li>
+<li>Which transport edge does FAPI require to be <strong>mutually</strong> authenticated?</li>
+</ol>
+<p><strong>Next:</strong> Day 17 — block bad payloads and lock down the edge: <strong>threat protection, CORS, and data masking</strong>.</p><div class="pager">
+<a class="prev" href="day-15.html">&larr; Day 15</a>
+<a class="next" href="day-17.html">Day 17 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

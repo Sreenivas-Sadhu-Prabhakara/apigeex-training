@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 25 — End-to-end Open Banking reference build (capstone) · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li class="active"><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Open Banking &middot; Week 4 &middot; ~90 min</div><h1 id="day-25-end-to-end-open-banking-reference-build-week-4-capstone">Day 25 — End-to-end Open Banking reference build (Week 4 capstone)</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll assemble everything from Weeks 3–4 into one coherent, FAPI-secured Open Banking surface — a clean proxy estate with shared security, consistent errors, and a single tested journey from TPP onboarding to a completed payment.</p>
+<p><strong>Builds on Days 19–24:</strong> today is integration, not new policies. You wire the pieces into a maintainable whole.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Individually-correct flows can still form an incoherent estate: duplicated security, drifting error formats, unclear proxy boundaries. The capstone is where you impose <strong>architecture</strong> — the thing a bank actually ships and a conformance suite actually tests.</p>
+<h2 id="the-reference-proxy-estate">The reference proxy estate</h2>
+<p>Decompose by concern (MECE), share what's cross-cutting:</p>
+<div class="codehilite"><pre><span></span><code>Shared flows (governance, attached via flow hook + callout)
+  sf-fapi-inbound      spike arrest, threat protection, FAPI headers
+  sf-consent-guard     token verify + consent status/expiry/permission
+  sf-jws-verify        detached JWS validation (OBSEAL)
+  sf-error-obie        DefaultFaultRule formatter (OBIE envelope)
+
+Proxies
+  fapi-as              /par /authorize /token   (Day 19)  — the security brain
+  ob-dcr               /register                (Day 24)  — onboarding
+  ob-aisp              /account-access-consents, /accounts, /balances, /transactions (Days 21–22)
+  ob-pisp              /domestic-payment-consents, /domestic-payments (Day 23)
+  ob-cof               /funds-confirmation-consents, /funds-confirmations (reuse Day 9 pattern)
+
+Backends (TargetServers, per-environment)
+  core-banking, payment-rail, consent-store
+</code></pre></div>
+
+<blockquote>
+<p><strong>Boundary rule:</strong> one proxy per OBIE API family, security centralized in <code>fapi-as</code> + shared flows. Don't fold AISP and PISP into one proxy — they have different scopes, products, and risk, and you want to deploy/rate-limit them independently.</p>
+</blockquote>
+<h2 id="consistent-base-paths-versioning">Consistent base paths &amp; versioning</h2>
+<p>Deploy under a single, versioned scheme so clients have one mental model:</p>
+<div class="codehilite"><pre><span></span><code>/open-banking/v3.1/par
+/open-banking/v3.1/token
+/open-banking/v3.1/register
+/open-banking/v3.1/aisp/account-access-consents
+/open-banking/v3.1/aisp/accounts
+/open-banking/v3.1/pisp/domestic-payment-consents
+/open-banking/v3.1/pisp/domestic-payments
+</code></pre></div>
+
+<p>Version in the <strong>base path</strong> (<code>v3.1</code>), not headers — it's what OBIE specs and TPPs expect. Run <code>v3.1</code> and a future <code>v4.0</code> as separate proxy revisions/base paths side by side during migration.</p>
+<h2 id="bind-it-together-with-flow-hooks">Bind it together with flow hooks</h2>
+<div class="codehilite"><pre><span></span><code><span class="c1"># every OB proxy inherits inbound hardening + FAPI headers</span>
+apigeecli<span class="w"> </span>flowhooks<span class="w"> </span>attach<span class="w"> </span>--name<span class="w"> </span>pre-proxy<span class="w"> </span>--sharedflow<span class="w"> </span>sf-fapi-inbound<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+<span class="c1"># and a uniform OBIE error envelope on the way out</span>
+apigeecli<span class="w"> </span>flowhooks<span class="w"> </span>attach<span class="w"> </span>--name<span class="w"> </span>post-proxy<span class="w"> </span>--sharedflow<span class="w"> </span>sf-error-obie<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>Consent guard and JWS verification stay <strong>FlowCallouts</strong> (only AISP/PISP need them, and ordering matters), not hooks.</p>
+<h2 id="the-golden-journey-one-end-to-end-test">The golden journey (one end-to-end test)</h2>
+<p>This is your acceptance test — the path a conformance run and a demo both follow:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 0) Onboard the TPP (DCR) → client_id, registered OBWAC</span>
+<span class="nv">CLIENT_ID</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../v3.1/register&quot;</span><span class="w"> </span>--cert<span class="w"> </span>tpp-obwac.crt<span class="w"> </span>--key<span class="w"> </span>tpp-obwac.key<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/jwt&quot;</span><span class="w"> </span>--data<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$REGISTRATION_JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span>.client_id<span class="k">)</span>
+
+<span class="c1"># 1) AISP: create + authorise an account-access consent, then read accounts</span>
+<span class="nv">AAC</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../v3.1/aisp/account-access-consents&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$CC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CONSENT_BODY</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span>.Data.ConsentId<span class="k">)</span>
+<span class="c1"># (PSU authorises via fapi-as → AC_TOKEN bound to AAC)</span>
+curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;.../v3.1/aisp/accounts&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$AC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.Data.Account | length&#39;</span>
+
+<span class="c1"># 2) PISP: create + authorise a payment consent, then submit (idempotent)</span>
+<span class="nv">PCID</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../v3.1/pisp/domestic-payment-consents&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$CC_PAY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-jws-signature: </span><span class="nv">$JWS</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-idempotency-key: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PAY_CONSENT</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span>.Data.ConsentId<span class="k">)</span>
+<span class="c1"># (PSU authorises → PAY_TOKEN)</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../v3.1/pisp/domestic-payments&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$PAY_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-jws-signature: </span><span class="nv">$JWS</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-idempotency-key: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PAYMENT_BODY</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.Data.Status&#39;</span>
+<span class="c1"># → &quot;AcceptedSettlementInProcess&quot;</span>
+</code></pre></div>
+
+<h2 id="conformance-mindset">Conformance mindset</h2>
+<p>Before you call it done, self-check against the OBIE/FAPI test themes:</p>
+<ul>
+<li><strong>Security:</strong> PAR enforced? PS256 only? cert-bound token rejected on wrong cert? mTLS required on all endpoints?</li>
+<li><strong>Consent:</strong> can't read data with <code>AwaitingAuthorisation</code>? expired consent blocked? permission scoping correct?</li>
+<li><strong>Payments:</strong> Initiation immutability enforced? idempotency replay-safe? detached JWS validated and tamper-detected?</li>
+<li><strong>Errors:</strong> every failure returns the OBIE envelope with a documented <code>ErrorCode</code>?</li>
+<li><strong>Headers:</strong> <code>x-fapi-interaction-id</code> echoed on every response, success and error?</li>
+</ul>
+<h2 id="lab-ship-the-estate">Lab — ship the estate</h2>
+<ol>
+<li>Create the five shared flows and five proxies above; attach the two flow hooks.</li>
+<li>Run the golden journey script end to end against your eval org.</li>
+<li>Produce a one-page <strong>conformance checklist</strong> (the bullets above) and mark each PASS, citing the policy that enforces it. This artifact is what you'd hand an auditor.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Decompose an Open Banking surface into a <strong>MECE proxy estate</strong> with centralized security.</li>
+<li>Apply consistent <strong>versioned base paths</strong> and <strong>flow-hook governance</strong>.</li>
+<li>Execute and self-assess the <strong>golden journey</strong> from DCR to a completed payment.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why keep AISP and PISP as separate proxies instead of one?</li>
+<li>Which security concerns belong in a <strong>flow hook</strong> vs a <strong>flow callout</strong>, and why?</li>
+<li>Name three things a FAPI/OBIE conformance run will try to break in your build.</li>
+</ol>
+<p><strong>Next:</strong> Day 26 — Week 5 (Operations) begins: promote this estate cleanly across <strong>environments, env groups, and revisions</strong>.</p><div class="pager">
+<a class="prev" href="day-24.html">&larr; Day 24</a>
+<a class="next" href="day-26.html">Day 26 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

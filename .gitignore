@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# Local secrets / scratch — never commit real keys or tokens
+*.key
+*.crt
+*.pem
+*.env
+!requirements.txt

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 09 — Service composition: ServiceCallout & target servers · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li class="active"><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Mediation &middot; Week 2 &middot; ~55 min</div><h1 id="day-9-service-composition-servicecallout-target-servers">Day 9 — Service composition: ServiceCallout &amp; target servers</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll call a <em>secondary</em> service in the middle of a flow with <strong>ServiceCallout</strong>, parse its response, and decouple backend hostnames from your bundle using <strong>TargetServers</strong>.</p>
+<p><strong>Builds on Day 7–8:</strong> the callout's request/response are messages you shape with AssignMessage and read with ExtractVariables.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Real proxies rarely talk to one backend. An Open Banking payment flow checks <strong>funds availability</strong> at one service, validates the <strong>consent</strong> at another, then submits the payment. ServiceCallout makes those mid-flow calls. And you never want a hostname like <code>core-banking.prod.internal</code> baked into a bundle that's supposed to move between environments — that's what TargetServers fix.</p>
+<h2 id="targetservers-environment-specific-backends">TargetServers — environment-specific backends</h2>
+<p>A <strong>TargetServer</strong> is a named, per-environment definition of a host/port. Your bundle references the <em>name</em>; each environment supplies the real host. This is how the same proxy hits a test core in <code>test</code> and the real core in <code>prod</code>.</p>
+<p>Create one in your environment:</p>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>targetservers<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>core-banking<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--host<span class="w"> </span>mocktarget.apigee.com<span class="w"> </span>--port<span class="w"> </span><span class="m">443</span><span class="w"> </span>--tls<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>Reference it from a TargetEndpoint with <code>&lt;LoadBalancer&gt;</code> instead of a hard <code>&lt;URL&gt;</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;TargetEndpoint</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;default&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;HTTPTargetConnection&gt;</span>
+<span class="w">    </span><span class="nt">&lt;LoadBalancer&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Server</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;core-banking&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/LoadBalancer&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Path&gt;</span>/json<span class="nt">&lt;/Path&gt;</span><span class="w">     </span><span class="cm">&lt;!-- path on the backend; host/port come from the TargetServer --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/HTTPTargetConnection&gt;</span>
+<span class="nt">&lt;/TargetEndpoint&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Now promoting to <code>prod</code> changes <strong>zero lines</strong> of the bundle — you just define a <code>core-banking</code> TargetServer in the prod environment pointing at the real host. This is core to Day 26's promotion model.</p>
+</blockquote>
+<h2 id="servicecallout-call-a-service-mid-flow">ServiceCallout — call a service mid-flow</h2>
+<p>ServiceCallout makes an HTTP call to another service <em>during</em> your flow and stores the result in a variable you choose. You typically: (1) build the callout request with AssignMessage, (2) run the callout, (3) extract from the callout response.</p>
+<h3 id="1-build-the-request">1 — build the request</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-FundsCheckRequest&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;true&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;request&quot;</span><span class="nt">&gt;</span>fundsCheckRequest<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Verb&gt;</span>POST<span class="nt">&lt;/Verb&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Path&gt;</span>/funds-confirmations<span class="nt">&lt;/Path&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Headers&gt;&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Content-Type&quot;</span><span class="nt">&gt;</span>application/json<span class="nt">&lt;/Header&gt;&lt;/Headers&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>{&quot;accountId&quot;:&quot;{ob.accountId}&quot;,&quot;amount&quot;:&quot;{ob.amount}&quot;}<span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<h3 id="2-the-callout">2 — the callout</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;ServiceCallout</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;SC-FundsCheck&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>SC-FundsCheck<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request</span><span class="w"> </span><span class="na">clearPayload=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">variable=</span><span class="s">&quot;fundsCheckRequest&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Response&gt;</span>fundsCheckResponse<span class="nt">&lt;/Response&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Timeout&gt;</span>3000<span class="nt">&lt;/Timeout&gt;</span>
+<span class="w">  </span><span class="nt">&lt;HTTPTargetConnection&gt;</span>
+<span class="w">    </span><span class="nt">&lt;LoadBalancer&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Server</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;core-banking&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/LoadBalancer&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/HTTPTargetConnection&gt;</span>
+<span class="nt">&lt;/ServiceCallout&gt;</span>
+</code></pre></div>
+
+<h3 id="3-read-its-response">3 — read its response</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;ExtractVariables</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;EV-FundsResult&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>fundsCheckResponse<span class="nt">&lt;/Source&gt;</span>
+<span class="w">  </span><span class="nt">&lt;JSONPayload&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Variable</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;fundsAvailable&quot;</span><span class="nt">&gt;&lt;JSONPath&gt;</span>$.Data.FundsAvailable<span class="nt">&lt;/JSONPath&gt;&lt;/Variable&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/JSONPayload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;VariablePrefix&gt;</span>funds<span class="nt">&lt;/VariablePrefix&gt;</span>
+<span class="nt">&lt;/ExtractVariables&gt;</span>
+</code></pre></div>
+
+<p>Now <code>funds.fundsAvailable</code> is available to a <code>&lt;Condition&gt;</code> deciding whether to proceed.</p>
+<blockquote>
+<p><strong>ServiceCallout vs the proxy target:</strong> the <em>target</em> (RouteRule → TargetEndpoint) is the main backend, called automatically after the request flow. A <strong>ServiceCallout</strong> is an extra, explicit call you make at a chosen point — auth servers, lookups, funds checks, fraud scoring.</p>
+</blockquote>
+<h2 id="composition-patterns">Composition patterns</h2>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Reach for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One main backend per request</td>
+<td>RouteRule → TargetEndpoint</td>
+</tr>
+<tr>
+<td>An auxiliary call mid-flow (lookup, auth, funds)</td>
+<td>ServiceCallout</td>
+</tr>
+<tr>
+<td>Choose backend by condition</td>
+<td>multiple RouteRules (Day 4)</td>
+</tr>
+<tr>
+<td>Hostname differs per environment</td>
+<td>TargetServer (<code>&lt;LoadBalancer&gt;</code>)</td>
+</tr>
+<tr>
+<td>Failover across hosts</td>
+<td>TargetServer LoadBalancer with multiple <code>&lt;Server&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="lab-funds-check-before-routing">Lab — funds check before routing</h2>
+<ol>
+<li>Create the <code>core-banking</code> TargetServer (above).</li>
+<li>Add <code>AM-FundsCheckRequest</code>, <code>SC-FundsCheck</code>, <code>EV-FundsResult</code> and chain them in the <code>CreatePayment</code> flow's <code>&lt;Request&gt;</code>. After them, add a conditional Step that raises a fault (Day 11 wires the fault) when funds aren't available:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CreatePayment&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/payments&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-AccountId<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-FundsCheckRequest<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>SC-FundsCheck<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-FundsResult<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<ol start="3">
+<li>Redeploy. Use a Debug session to watch the <strong>callout</strong> appear as its own transaction in the trace, separate from the main target call.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Decouple hostnames with <strong>TargetServers</strong> referenced via <code>&lt;LoadBalancer&gt;</code>.</li>
+<li>Make a mid-flow <strong>ServiceCallout</strong>, build its request, and parse its response.</li>
+<li>Pick the right composition tool for each backend-interaction shape.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why does using a TargetServer make environment promotion cleaner?</li>
+<li>What variable does <code>SC-FundsCheck</code> write, and how do you read a field out of it?</li>
+<li>ServiceCallout vs RouteRule target — which is "automatic after the request flow"?</li>
+</ol>
+<p><strong>Next:</strong> Day 10 — make all this fast and cheap with <strong>caching</strong> (ResponseCache, LookupCache/PopulateCache) and store config in <strong>KVMs</strong>.</p><div class="pager">
+<a class="prev" href="day-08.html">&larr; Day 08</a>
+<a class="next" href="day-10.html">Day 10 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

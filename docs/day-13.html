@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 13 — App identity: API keys, products, apps & developers · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li class="active"><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Security &middot; Week 3 &middot; ~55 min</div><h1 id="day-13-app-identity-api-keys-products-apps-developers">Day 13 — App identity: API keys, products, apps &amp; developers</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll model <em>who</em> can call your APIs using <strong>API products</strong>, <strong>developers</strong>, and <strong>developer apps</strong>, then enforce it at the edge with <strong>VerifyAPIKey</strong> — the foundation OAuth builds on tomorrow.</p>
+<p><strong>Builds on Day 6 &amp; 12:</strong> API products are also where quotas <em>should</em> live (<code>countRef</code>), and VerifyAPIKey belongs in your shared inbound flow.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Before you can authorize a call, you must know <em>which app</em> is making it. Apigee's app-identity model is the registry of consumers. Even in OAuth and Open Banking, the OAuth <strong>client</strong> is an Apigee <strong>developer app</strong> under the hood — so this model never goes away; it gets a security layer on top.</p>
+<h2 id="the-object-model">The object model</h2>
+<div class="codehilite"><pre><span></span><code>Developer (a person/org: tpp-acme@example.com)
+└── Developer App  (a registered client: &quot;Acme Budgeting App&quot;)
+    ├── consumerKey / consumerSecret   ← the credentials
+    └── is granted one or more →
+        API Product (&quot;AISP Read&quot;)
+        └── bundles specific proxy operations + quota + scopes + environments
+</code></pre></div>
+
+<p>Key insight: an app doesn't get access to a <em>proxy</em> directly. It's granted an <strong>API product</strong>, and the product decides which proxies/paths/methods and which environments are reachable, plus the quota and OAuth scopes. <strong>The API product is the unit of access control.</strong></p>
+<h2 id="create-the-chain">Create the chain</h2>
+<h3 id="1-an-api-product">1 — an API product</h3>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>products<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>aisp-read<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--displayName<span class="w"> </span><span class="s2">&quot;AISP Read&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--approval<span class="w"> </span>auto<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--envs<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--scopes<span class="w"> </span><span class="s2">&quot;accounts&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--quota<span class="w"> </span><span class="m">1000</span><span class="w"> </span>--interval<span class="w"> </span><span class="m">1</span><span class="w"> </span>--unit<span class="w"> </span>day<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opgrp<span class="w"> </span><span class="s1">&#39;{&quot;operationConfigs&quot;:[{&quot;apiSource&quot;:&quot;aisp-house-style&quot;,&quot;operations&quot;:[{&quot;resource&quot;:&quot;/accounts&quot;,&quot;methods&quot;:[&quot;GET&quot;]},{&quot;resource&quot;:&quot;/accounts/**&quot;,&quot;methods&quot;:[&quot;GET&quot;]}]}]}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p>The operation group scopes the product to <em>specific paths and methods</em> of named proxies — <code>/accounts</code> and <code>/accounts/**</code> GET only. This is far stronger than "grant the whole proxy."</p>
+</blockquote>
+<h3 id="2-a-developer">2 — a developer</h3>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>developers<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--email<span class="w"> </span>tpp-acme@example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--first<span class="w"> </span>Acme<span class="w"> </span>--last<span class="w"> </span>Fintech<span class="w"> </span>--user<span class="w"> </span>acme<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h3 id="3-a-developer-app-bound-to-the-product">3 — a developer app bound to the product</h3>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apps<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>acme-budgeting<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--email<span class="w"> </span>tpp-acme@example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--prods<span class="w"> </span>aisp-read<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># read back the credentials</span>
+apigeecli<span class="w"> </span>apps<span class="w"> </span>get<span class="w"> </span>--name<span class="w"> </span>acme-budgeting<span class="w"> </span>--email<span class="w"> </span>tpp-acme@example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.credentials[0]&#39;</span>
+<span class="c1"># → { &quot;consumerKey&quot;: &quot;....&quot;, &quot;consumerSecret&quot;: &quot;....&quot;, &quot;apiProducts&quot;:[{&quot;apiproduct&quot;:&quot;aisp-read&quot;}] }</span>
+</code></pre></div>
+
+<p>Grab the <code>consumerKey</code> — that's the API key clients send.</p>
+<h2 id="enforce-with-verifyapikey">Enforce with VerifyAPIKey</h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;VerifyAPIKey</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;VK-Key&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>VK-Key<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- where the key arrives: a header, query param, etc. --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;APIKey</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;request.header.x-api-key&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/VerifyAPIKey&gt;</span>
+</code></pre></div>
+
+<p>On success Apigee populates rich variables you can use downstream:</p>
+<ul>
+<li><code>verifyapikey.VK-Key.client_id</code> — the consumerKey</li>
+<li><code>verifyapikey.VK-Key.apiproduct.name</code> — which product authorized it</li>
+<li><code>verifyapikey.VK-Key.developer.email</code>, <code>...developer.app.name</code></li>
+<li><code>verifyapikey.VK-Key.apiproduct.developer.quota.limit</code> — drive Quota's <code>countRef</code> from here!</li>
+</ul>
+<p>Attach it early (PreFlow.Request), and now make Quota product-driven:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Quota</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Q-PerApp&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Allow</span><span class="w"> </span><span class="na">countRef=</span><span class="s">&quot;verifyapikey.VK-Key.apiproduct.developer.quota.limit&quot;</span><span class="w"> </span><span class="na">count=</span><span class="s">&quot;1000&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Interval</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;verifyapikey.VK-Key.apiproduct.developer.quota.interval&quot;</span><span class="nt">&gt;</span>1<span class="nt">&lt;/Interval&gt;</span>
+<span class="w">  </span><span class="nt">&lt;TimeUnit</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;verifyapikey.VK-Key.apiproduct.developer.quota.timeunit&quot;</span><span class="nt">&gt;</span>day<span class="nt">&lt;/TimeUnit&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Identifier</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;verifyapikey.VK-Key.client_id&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/Quota&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Now changing a customer's plan is a <strong>product edit</strong>, not a proxy redeploy. This is the separation Open Banking and monetization both rely on.</p>
+</blockquote>
+<h2 id="lab-gate-the-aisp-proxy-on-app-identity">Lab — gate the AISP proxy on app identity</h2>
+<ol>
+<li>Create the product → developer → app chain above; capture the <code>consumerKey</code>.</li>
+<li>Add <code>VK-Key</code> to PreFlow.Request <strong>before</strong> <code>Q-PerApp</code>, and switch the quota to <code>countRef</code>.</li>
+<li>Redeploy and test allow/deny:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span>--name<span class="w"> </span>aisp-house-style<span class="w"> </span>--proxy-folder<span class="w"> </span>./aisp-house-style/apiproxy<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>aisp-house-style<span class="w"> </span>--rev<span class="w"> </span><span class="m">2</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="nv">KEY</span><span class="o">=</span><span class="s2">&quot;&lt;paste consumerKey&gt;&quot;</span>
+<span class="c1"># no key → 401</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/accounts&quot;</span>
+<span class="c1"># valid key → proceeds</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: </span><span class="nv">$KEY</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/accounts&quot;</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Explain why the <strong>API product</strong> — not the proxy — is the unit of access.</li>
+<li>Build the <strong>developer → app → product</strong> chain and read out the credentials.</li>
+<li>Enforce identity with <strong>VerifyAPIKey</strong> and drive quotas from the product.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>An app needs access to two proxies' specific endpoints. Where do you define that?</li>
+<li>Why drive <code>Quota</code> from <code>countRef</code> rather than a fixed <code>count</code>?</li>
+<li>In OAuth/Open Banking, what Apigee object represents the OAuth <em>client</em>?</li>
+</ol>
+<p><strong>Next:</strong> Day 14 — turn that app identity into bearer tokens: <strong>OAuth 2.0 client credentials</strong> with the OAuthV2 policy.</p><div class="pager">
+<a class="prev" href="day-12.html">&larr; Day 12</a>
+<a class="next" href="day-14.html">Day 14 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

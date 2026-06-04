@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 19 — Implementing FAPI on Apigee (Week 3 capstone) · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li class="active"><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Security &middot; Week 3 &middot; ~80 min</div><h1 id="day-19-implementing-fapi-on-apigee-week-3-capstone">Day 19 — Implementing FAPI on Apigee (Week 3 capstone)</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll build the FAPI 1.0 Advanced authorization server on Apigee: a <strong>PAR</strong> endpoint that verifies a <strong>PS256 request object</strong> and <strong>private_key_jwt</strong> client auth, then issues a <strong>certificate-bound</strong> access token verified on every resource call.</p>
+<p><strong>Builds on Day 18's gap list:</strong> today you close every box you ticked "missing."</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>This is the proxy a FAPI conformance suite runs against. Banks fail certification on exactly these flows. Building it once, correctly, is the single most valuable artifact in the course — Weeks 4 reuse it as the security layer under consent, AISP, and PISP.</p>
+<h2 id="architecture">Architecture</h2>
+<div class="codehilite"><pre><span></span><code>fapi-as  (one proxy, four flows)
+  POST /par        → verify client_assertion (PS256) + request object (PS256), store, return request_uri
+  GET  /authorize  → resolve request_uri, authenticate user + consent, issue code (+ id_token w/ hashes)
+  POST /token      → verify client_assertion, redeem code+PKCE, mint cert-bound access token
+  (resource proxies VerifyAccessToken + check cnf.x5t#S256 == presented cert)
+</code></pre></div>
+
+<h2 id="1-par-endpoint">1 — PAR endpoint</h2>
+<p>The TPP pushes its request object up front. Verify both the client and the request object, then mint a one-time <code>request_uri</code> stored in cache.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;PAR&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/par&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-VerifyClientAssertion<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">   </span><span class="cm">&lt;!-- private_key_jwt, Day 18 --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-VerifyRequestObject<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">      </span><span class="cm">&lt;!-- PS256 request object, Day 15 --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-MintRequestUri<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">            </span><span class="cm">&lt;!-- urn:...:&lt;uuid&gt; --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>PC-RequestObject<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">             </span><span class="cm">&lt;!-- PopulateCache, 60s TTL --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-ParResponse<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">               </span><span class="cm">&lt;!-- {&quot;request_uri&quot;:..,&quot;expires_in&quot;:60} --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1">// resources/jsc/mintRequestUri.js</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">uri</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;urn:ietf:params:oauth:request_uri:&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">createHash</span><span class="p">(</span><span class="s1">&#39;sha256&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;messageid&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;client.received.start.timestamp&#39;</span><span class="p">))</span>
+<span class="w">  </span><span class="p">.</span><span class="nx">digest</span><span class="p">(</span><span class="s1">&#39;hex&#39;</span><span class="p">).</span><span class="nx">substring</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="mf">32</span><span class="p">);</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;par.request_uri&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">uri</span><span class="p">);</span>
+<span class="c1">// stash the verified request object claims for /authorize to read back</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;par.claims&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;jwt.JWT-VerifyRequestObject.payload-json&#39;</span><span class="p">));</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;PopulateCache</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;PC-RequestObject&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;CacheKey&gt;&lt;KeyFragment</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;par.request_uri&quot;</span><span class="nt">/&gt;&lt;/CacheKey&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>par.claims<span class="nt">&lt;/Source&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpirySettings&gt;&lt;TimeoutInSeconds&gt;</span>60<span class="nt">&lt;/TimeoutInSeconds&gt;&lt;/ExpirySettings&gt;</span>
+<span class="nt">&lt;/PopulateCache&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-ParResponse&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;StatusCode&gt;</span>201<span class="nt">&lt;/StatusCode&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>{&quot;request_uri&quot;:&quot;{par.request_uri}&quot;,&quot;expires_in&quot;:60}<span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;response&quot;</span><span class="nt">&gt;</span>response<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<h2 id="2-authorize-endpoint-resolve-request_uri-enforce-noncestate">2 — Authorize endpoint (resolve request_uri, enforce nonce/state)</h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Authorize&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/authorize&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;GET&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>LC-RequestObject<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">             </span><span class="cm">&lt;!-- LookupCache by request_uri --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-UnknownRequestUri<span class="nt">&lt;/Name&gt;&lt;Condition&gt;</span>par.claims<span class="w"> </span>=<span class="w"> </span>null<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="cm">&lt;!-- authenticate user + render consent here (your login app) --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-GenerateAuthCode<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">          </span><span class="cm">&lt;!-- carries nonce/state, PKCE challenge --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-IdToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                  </span><span class="cm">&lt;!-- id_token with c_hash + s_hash (JARM-style) --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<p><code>c_hash</code>/<code>s_hash</code> are left-half base64url of SHA-256 over the code/state — compute in a JS step and add as claims in <code>JWT-IdToken</code>.</p>
+<h2 id="3-token-endpoint-with-a-certificate-bound-token">3 — Token endpoint with a certificate-bound token</h2>
+<p>Verify client_assertion + PKCE, redeem the code, then <strong>stamp the client cert thumbprint</strong> into the token as <code>cnf.x5t#S256</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Token&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/token&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-VerifyClientAssertion<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-VerifyPkce<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-BindCert<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                  </span><span class="cm">&lt;!-- set cnf thumbprint var --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-RedeemCode<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                </span><span class="cm">&lt;!-- includes the cnf as a custom attribute --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-BindCert&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- thumbprint of the TPP&#39;s mTLS client cert, base64url SHA-256 --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Name&gt;</span>token.cnf.x5t<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Ref&gt;</span>tls.client.certificate.fingerprint<span class="nt">&lt;/Ref&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/AssignVariable&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<p>Add the binding as a token attribute so it travels with the token (and surfaces on VerifyAccessToken):</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;OAuthV2</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;OA-RedeemCode&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Operation&gt;</span>GenerateAccessToken<span class="nt">&lt;/Operation&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpiresIn&gt;</span>300000<span class="nt">&lt;/ExpiresIn&gt;</span>
+<span class="w">  </span><span class="nt">&lt;SupportedGrantTypes&gt;&lt;GrantType&gt;</span>authorization_code<span class="nt">&lt;/GrantType&gt;&lt;/SupportedGrantTypes&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GrantType&gt;</span>request.formparam.grant_type<span class="nt">&lt;/GrantType&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Code&gt;</span>request.formparam.code<span class="nt">&lt;/Code&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Attributes&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Attribute</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;cnf_x5t&quot;</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;token.cnf.x5t&quot;</span><span class="w"> </span><span class="na">display=</span><span class="s">&quot;false&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Attributes&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GenerateResponse</span><span class="w"> </span><span class="na">enabled=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/OAuthV2&gt;</span>
+</code></pre></div>
+
+<h2 id="4-enforce-the-binding-on-resource-calls">4 — Enforce the binding on resource calls</h2>
+<p>On AISP/PISP proxies, after <code>VerifyAccessToken</code>, fail if the presenting cert ≠ the bound thumbprint:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-VerifyToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="nt">&lt;Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Name&gt;</span>RF-CertMismatch<span class="nt">&lt;/Name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>oauthv2accesstoken.OA-VerifyToken.accesstoken.cnf_x5t<span class="w"> </span>!=<span class="w"> </span>tls.client.certificate.fingerprint<span class="nt">&lt;/Condition&gt;</span>
+<span class="nt">&lt;/Step&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>This is the heart of <strong>sender-constrained tokens</strong>: a stolen bearer token is useless without the TPP's private key/cert. Conformance suites test exactly this.</p>
+</blockquote>
+<h2 id="capstone-run-the-fapi-dance">Capstone — run the FAPI dance</h2>
+<ol>
+<li>Assemble <code>fapi-as</code> with the four flows + all referenced policies; deploy.</li>
+<li>As the "TPP", sign a request object and a <code>client_assertion</code> (PS256) with a key whose JWKS you registered, then:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># (using a helper script that signs JWTs with your TPP key)</span>
+<span class="c1"># 1) PAR</span>
+<span class="nv">REQ_URI</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>--cert<span class="w"> </span>tpp.crt<span class="w"> </span>--key<span class="w"> </span>tpp.key<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/fapi-as/par&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_assertion=</span><span class="nv">$CLIENT_ASSERTION</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;request=</span><span class="nv">$REQUEST_OBJECT</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span>.request_uri<span class="k">)</span>
+
+<span class="c1"># 2) authorize (browser): /authorize?client_id=$CK&amp;request_uri=$REQ_URI  → capture code</span>
+<span class="c1"># 3) token (mTLS) → cert-bound access_token</span>
+curl<span class="w"> </span>-s<span class="w"> </span>--cert<span class="w"> </span>tpp.crt<span class="w"> </span>--key<span class="w"> </span>tpp.key<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/fapi-as/token&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=authorization_code&amp;code=</span><span class="nv">$CODE</span><span class="s2">&amp;code_verifier=</span><span class="nv">$VERIFIER</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&amp;client_assertion=</span><span class="nv">$CLIENT_ASSERTION</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</code></pre></div>
+
+<ol start="3">
+<li>Prove the binding: call <code>/accounts</code> with the token but a <strong>different</strong> client cert → expect <code>401</code> from <code>RF-CertMismatch</code>.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Stand up a <strong>PAR</strong> endpoint validating a <strong>PS256 request object</strong> and <strong>private_key_jwt</strong>.</li>
+<li>Issue <strong>certificate-bound</strong> access tokens and enforce the binding on resources.</li>
+<li>Pass the structural requirements of <strong>FAPI 1.0 Advanced</strong>.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>What stops a stolen access token from being replayed by an attacker?</li>
+<li>Why must the <code>request_uri</code> from PAR be short-lived and one-time?</li>
+<li>Where does <code>cnf.x5t#S256</code> come from at issue, and what's it compared against at use?</li>
+</ol>
+<p><strong>Next:</strong> Day 20 — Week 4 opens the domain: the <strong>UK Open Banking landscape, roles, and trust framework</strong> that this FAPI server plugs into.</p><div class="pager">
+<a class="prev" href="day-18.html">&larr; Day 18</a>
+<a class="next" href="day-20.html">Day 20 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

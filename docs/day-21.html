@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 21 — Consent: the account-access consent model · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li class="active"><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Open Banking &middot; Week 4 &middot; ~70 min</div><h1 id="day-21-consent-the-account-access-consent-model">Day 21 — Consent: the account-access consent model</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll build the <strong>account-access consent</strong> lifecycle on Apigee — create a consent (status <code>AwaitingAuthorisation</code>), have the PSU authorize it (→ <code>Authorised</code>), and enforce its status and permissions on every later data call.</p>
+<p><strong>Builds on Days 19–20:</strong> the consent is created with a <em>client-credentials</em> token, authorized via your <em>FAPI authorization-code</em> flow, then <em>enforced</em> on AISP resources.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Consent is the legal and technical core of Open Banking. No data flows without an <code>Authorised</code> consent that grants specific <strong>permissions</strong> for a specific <strong>period</strong>. This is the single object regulators, TPPs, and PSUs all care about — and the one most implementations get subtly wrong.</p>
+<h2 id="the-consent-lifecycle">The consent lifecycle</h2>
+<div class="codehilite"><pre><span></span><code>TPP (client_credentials token)
+  └─ POST /account-access-consents  → ConsentId, Status=AwaitingAuthorisation
+PSU authorization (your FAPI auth-code flow, Day 19)
+  └─ consent is tied to the access token via the &quot;openbanking_intent_id&quot; claim
+  └─ PSU approves → Status=Authorised   (or Rejected)
+TPP (authorization_code token, bound to ConsentId)
+  └─ GET /accounts ... enforced against the consent&#39;s Status + Permissions + ExpirationDateTime
+Later: PSU or TPP revokes → Status=Revoked
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AwaitingAuthorisation</code></td>
+<td>Created, not yet approved by the PSU</td>
+</tr>
+<tr>
+<td><code>Authorised</code></td>
+<td>PSU approved; data calls allowed</td>
+</tr>
+<tr>
+<td><code>Rejected</code></td>
+<td>PSU declined</td>
+</tr>
+<tr>
+<td><code>Revoked</code></td>
+<td>Previously authorised, now withdrawn</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-create-the-consent-post-account-access-consents">1 — Create the consent (<code>POST /account-access-consents</code>)</h2>
+<p>The TPP uses a <strong>client-credentials</strong> token (scope <code>accounts</code>) to register the <em>intent</em>. The body declares <strong>Permissions</strong>, optional <strong>ExpirationDateTime</strong>, and transaction date range.</p>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/open-banking/v3.1/aisp/account-access-consents&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$CC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-idempotency-key: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
+<span class="s1">    &quot;Data&quot;: {</span>
+<span class="s1">      &quot;Permissions&quot;: [&quot;ReadAccountsDetail&quot;,&quot;ReadBalances&quot;,&quot;ReadTransactionsDetail&quot;,&quot;ReadTransactionsCredits&quot;,&quot;ReadTransactionsDebits&quot;],</span>
+<span class="s1">      &quot;ExpirationDateTime&quot;: &quot;2026-12-31T00:00:00+00:00&quot;,</span>
+<span class="s1">      &quot;TransactionFromDateTime&quot;: &quot;2026-01-01T00:00:00+00:00&quot;,</span>
+<span class="s1">      &quot;TransactionToDateTime&quot;: &quot;2026-06-04T00:00:00+00:00&quot;</span>
+<span class="s1">    },</span>
+<span class="s1">    &quot;Risk&quot;: {}</span>
+<span class="s1">  }&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<span class="c1"># → { &quot;Data&quot;: { &quot;ConsentId&quot;: &quot;aac-123&quot;, &quot;Status&quot;: &quot;AwaitingAuthorisation&quot;, ... } }</span>
+</code></pre></div>
+
+<p>Inside Apigee, the consent flow:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CreateAccountAccessConsent&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/account-access-consents&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-VerifyToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                 </span><span class="cm">&lt;!-- scope=accounts (client_credentials) --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-ConsentRequest<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">              </span><span class="cm">&lt;!-- pull Permissions, dates --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-ValidatePermissions<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">         </span><span class="cm">&lt;!-- against allowed enum --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-MintConsentId<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">               </span><span class="cm">&lt;!-- aac-&lt;uuid&gt; --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>KVM-StoreConsent<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">               </span><span class="cm">&lt;!-- persist status+permissions (see note) --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-ConsentCreatedResponse<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Where to store consent state?</strong> A KVM works for a lab, but production consent is high-volume mutable state — back it with a real datastore (Firestore/Cloud SQL/the core) reached via <strong>ServiceCallout</strong>. Treat the KVM examples here as a stand-in you'll swap on Day 25/30.</p>
+</blockquote>
+<h2 id="2-bind-consent-to-authorization">2 — Bind consent to authorization</h2>
+<p>The OB twist: the PSU authorizes a <strong>specific consent</strong>. The TPP puts the <code>ConsentId</code> into the <strong><code>openbanking_intent_id</code></strong> claim of the signed request object (Day 19 PAR). During <code>/authorize</code>, you:</p>
+<ol>
+<li>Read <code>openbanking_intent_id</code> from the verified request object → the <code>ConsentId</code>.</li>
+<li>Look up the consent; ensure it's <code>AwaitingAuthorisation</code>.</li>
+<li>After PSU approval, set status <code>Authorised</code> and <strong>stamp the ConsentId into the issued access token</strong> (as a custom attribute/claim).</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- in the authorize flow, after PSU approval --&gt;</span>
+<span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-AuthoriseConsent&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;&lt;Name&gt;</span>consent.id<span class="nt">&lt;/Name&gt;&lt;Ref&gt;</span>requestobject.claims.openbanking_intent_id<span class="nt">&lt;/Ref&gt;&lt;/AssignVariable&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;&lt;Name&gt;</span>consent.newStatus<span class="nt">&lt;/Name&gt;&lt;Value&gt;</span>Authorised<span class="nt">&lt;/Value&gt;&lt;/AssignVariable&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+<span class="cm">&lt;!-- KVM-StoreConsent updates status; OA-GenerateAuthCode carries consent.id as an attribute --&gt;</span>
+</code></pre></div>
+
+<h2 id="3-enforce-consent-on-every-data-call">3 — Enforce consent on every data call</h2>
+<p>This is the reusable guard for all AISP endpoints (Day 22). Put it in a shared flow:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;SharedFlow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;default&quot;</span><span class="nt">&gt;</span><span class="w">  </span><span class="cm">&lt;!-- sf-consent-guard --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-VerifyToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                  </span><span class="cm">&lt;!-- auth-code token, scope accounts --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-ConsentIdFromToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">           </span><span class="cm">&lt;!-- read ConsentId attribute off the token --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>KVM-GetConsent<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                  </span><span class="cm">&lt;!-- load status+permissions+expiry --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-ConsentNotAuthorised<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>consent.status<span class="w"> </span>!=<span class="w"> </span>&quot;Authorised&quot;<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-ConsentExpired<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>consent.expiry<span class="w"> </span>LesserThanOrEquals<span class="w"> </span>system.timestamp<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- permission check is per-endpoint, set consent.requiredPermission before calling this flow --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-PermissionMissing<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>NOT<span class="w"> </span>(consent.permissions<span class="w"> </span>~~<span class="w"> </span>consent.requiredPermission)<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="nt">&lt;/SharedFlow&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;RaiseFault</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;RF-ConsentNotAuthorised&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;FaultResponse&gt;&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;StatusCode&gt;</span>403<span class="nt">&lt;/StatusCode&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>{&quot;Code&quot;:&quot;403<span class="w"> </span>Forbidden&quot;,&quot;Errors&quot;:[{&quot;ErrorCode&quot;:&quot;UK.OBIE.Resource.InvalidConsentStatus&quot;,&quot;Message&quot;:&quot;Consent<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>Authorised.&quot;}]}<span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;&lt;/FaultResponse&gt;</span>
+<span class="nt">&lt;/RaiseFault&gt;</span>
+</code></pre></div>
+
+<h2 id="lab-full-consent-lifecycle">Lab — full consent lifecycle</h2>
+<ol>
+<li>Build the <code>aisp-consent</code> proxy with the create + status (<code>GET /account-access-consents/{ConsentId}</code>) + delete (revoke) flows.</li>
+<li>Build the <code>sf-consent-guard</code> shared flow.</li>
+<li>Run the lifecycle end to end:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># create</span>
+<span class="nv">CONSENT</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../account-access-consents&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$CC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;{...}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span>.Data.ConsentId<span class="k">)</span>
+<span class="c1"># read status</span>
+curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;.../account-access-consents/</span><span class="nv">$CONSENT</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$CC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.Data.Status<span class="w">   </span><span class="c1"># AwaitingAuthorisation</span>
+<span class="c1"># (PSU authorizes via the FAPI auth-code flow → Authorised, access token carries ConsentId)</span>
+<span class="c1"># revoke</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span><span class="s2">&quot;.../account-access-consents/</span><span class="nv">$CONSENT</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$CC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w">  </span><span class="c1"># 204</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Implement the <strong>consent lifecycle</strong> and its four statuses.</li>
+<li>Bind a consent to authorization via <strong><code>openbanking_intent_id</code></strong> and stamp the <code>ConsentId</code> into the token.</li>
+<li><strong>Enforce</strong> status, expiry, and permissions on data calls with a reusable consent-guard shared flow.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>What links a PSU's authorization to a <em>specific</em> consent?</li>
+<li>Which permission must a consent hold for a TPP to read detailed transactions?</li>
+<li>Why is a KVM a poor production store for consent state?</li>
+</ol>
+<p><strong>Next:</strong> Day 22 — use that consent to serve real data: the <strong>AISP Accounts, Balances, and Transactions</strong> APIs.</p><div class="pager">
+<a class="prev" href="day-20.html">&larr; Day 20</a>
+<a class="next" href="day-22.html">Day 22 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

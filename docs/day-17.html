@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 17 — Threat protection, CORS & data masking · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li class="active"><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Security &middot; Week 3 &middot; ~55 min</div><h1 id="day-17-threat-protection-cors-data-masking">Day 17 — Threat protection, CORS &amp; data masking</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll block malformed and malicious payloads with <strong>JSONThreatProtection / RegularExpressionProtection</strong>, enable <strong>CORS</strong> safely for browser TPPs, and <strong>mask</strong> sensitive fields so they never leak into Debug traces or logs.</p>
+<p><strong>Builds on Day 11 &amp; 12:</strong> these go in your shared inbound flow so every proxy is protected by default.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>A bank's edge is a target. Oversized JSON, deeply nested payloads, SQL/script injection, and content-type confusion are everyday attacks. And under GDPR/PSD2 you must ensure PANs, tokens, and PII don't end up in logs or traces. These policies are cheap insurance you attach once, centrally.</p>
+<h2 id="json-xml-threat-protection">JSON &amp; XML threat protection</h2>
+<p>Reject structurally abusive payloads <em>before</em> parsing them downstream:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;JSONThreatProtection</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;JTP-Inbound&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>JTP-Inbound<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ArrayElementCount&gt;</span>100<span class="nt">&lt;/ArrayElementCount&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ContainerDepth&gt;</span>10<span class="nt">&lt;/ContainerDepth&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ObjectEntryCount&gt;</span>100<span class="nt">&lt;/ObjectEntryCount&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ObjectEntryNameLength&gt;</span>100<span class="nt">&lt;/ObjectEntryNameLength&gt;</span>
+<span class="w">  </span><span class="nt">&lt;StringValueLength&gt;</span>2000<span class="nt">&lt;/StringValueLength&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>request<span class="nt">&lt;/Source&gt;</span>
+<span class="nt">&lt;/JSONThreatProtection&gt;</span>
+</code></pre></div>
+
+<p>If you accept any XML (rare in OB, common in legacy core integrations), add <code>XMLThreatProtection</code> with <code>&lt;NodeDepth&gt;</code>, <code>&lt;ChildCount&gt;</code>, and entity-expansion limits to stop billion-laughs attacks.</p>
+<h2 id="regularexpressionprotection-injection-patterns">RegularExpressionProtection — injection patterns</h2>
+<p>Scan inputs for SQLi/XSS/path-traversal signatures across headers, query params, and body:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;RegularExpressionProtection</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;REP-Inbound&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>REP-Inbound<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>request<span class="nt">&lt;/Source&gt;</span>
+<span class="w">  </span><span class="nt">&lt;QueryParam</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;q&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Pattern&gt;</span>[\s]*(?i)(select|insert|delete|update|drop|union)[\s]<span class="nt">&lt;/Pattern&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/QueryParam&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;x-account-id&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Pattern&gt;</span>(?i)(\.\./|<span class="nt">&lt;script</span><span class="err">)&lt;/Pattern</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Header&gt;</span>
+<span class="w">  </span><span class="nt">&lt;JSONPayload&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Element</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;$.Data..*&quot;</span><span class="nt">&gt;&lt;Pattern&gt;</span>(?i)(<span class="nt">&lt;script</span><span class="err">|</span><span class="na">onerror=</span><span class="s">)&lt;/Pattern</span><span class="nt">&gt;&lt;/Element&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/JSONPayload&gt;</span>
+<span class="nt">&lt;/RegularExpressionProtection&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Threat-protection policies <strong>throw</strong> on a hit, so your Day-11 FaultRules catch them and return a clean <code>400</code>/<code>403</code> instead of a stack trace. Tune limits to your real payloads — too strict breaks legitimate traffic.</p>
+</blockquote>
+<h2 id="cors-for-browser-based-tpps">CORS for browser-based TPPs</h2>
+<p>If a TPP's single-page app calls your API directly, browsers require CORS. Apigee X uses a dedicated <strong>CORS</strong> policy (preferred over hand-rolled AssignMessage):</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;CORS</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CORS-Allow&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>CORS-Allow<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AllowOrigins&gt;</span>https://app.acme-fintech.example<span class="nt">&lt;/AllowOrigins&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AllowMethods&gt;</span>GET,<span class="w"> </span>POST,<span class="w"> </span>OPTIONS<span class="nt">&lt;/AllowMethods&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AllowHeaders&gt;</span>Authorization,<span class="w"> </span>Content-Type,<span class="w"> </span>x-fapi-interaction-id,<span class="w"> </span>x-idempotency-key<span class="nt">&lt;/AllowHeaders&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExposeHeaders&gt;</span>x-fapi-interaction-id<span class="nt">&lt;/ExposeHeaders&gt;</span>
+<span class="w">  </span><span class="nt">&lt;MaxAge&gt;</span>3600<span class="nt">&lt;/MaxAge&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AllowCredentials&gt;</span>true<span class="nt">&lt;/AllowCredentials&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GeneratePreflightResponse&gt;</span>true<span class="nt">&lt;/GeneratePreflightResponse&gt;</span>
+<span class="w">  </span><span class="nt">&lt;IgnoreUnresolvedVariables&gt;</span>true<span class="nt">&lt;/IgnoreUnresolvedVariables&gt;</span>
+<span class="nt">&lt;/CORS&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Never</strong> use <code>AllowOrigins&gt;*</code> with <code>AllowCredentials&gt;true</code> — it's insecure and browsers reject it. List explicit origins. <code>GeneratePreflightResponse</code> lets Apigee answer the <code>OPTIONS</code> preflight itself.</p>
+</blockquote>
+<h2 id="data-masking-keep-secrets-out-of-traces-logs">Data masking — keep secrets out of traces &amp; logs</h2>
+<p>Two layers:</p>
+<ol>
+<li><strong><code>private.*</code> variables</strong> (Day 10) — automatically masked in Debug.</li>
+<li><strong>Mask configurations</strong> — org/proxy-level rules that redact fields in Debug/trace output (e.g. <code>$.Data.Account.Identification</code>, the <code>Authorization</code> header, card PANs).</li>
+</ol>
+<p>Create a mask config so account numbers never appear in a trace:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;jSONPathsRequest&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">[</span><span class="s2">&quot;$.Data.Initiation.CreditorAccount.Identification&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;jSONPathsResponse&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;$.Data.Account[*].Account[*].Identification&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;xPathsRequest&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">  </span><span class="nt">&quot;namespaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;request.header.authorization&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;request.header.x-api-key&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># apply a data-mask (maskconfig) to the org/proxy</span>
+apigeecli<span class="w"> </span>maskconfigs<span class="w"> </span>create<span class="w"> </span>--proxy<span class="w"> </span>aisp-house-style<span class="w"> </span>-f<span class="w"> </span>./maskconfig.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Masking affects <strong>traces and analytics</strong>, not the actual response to the client. To remove data from the <em>response</em>, strip it with AssignMessage <code>&lt;Remove&gt;</code> (Day 7). For real log redaction, also avoid logging sensitive vars in your MessageLogging policy (Day 28).</p>
+</blockquote>
+<h2 id="lab-harden-the-shared-inbound-flow">Lab — harden the shared inbound flow</h2>
+<ol>
+<li>Add <code>JTP-Inbound</code> and <code>REP-Inbound</code> to <code>sf-fapi-inbound</code> so <strong>every</strong> proxy gets threat protection via the flow hook.</li>
+<li>Add the <code>CORS-Allow</code> policy to the AISP proxy PreFlow and confirm an <code>OPTIONS</code> preflight returns the right headers:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-is<span class="w"> </span>-X<span class="w"> </span>OPTIONS<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/accounts&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Origin: https://app.acme-fintech.example&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Access-Control-Request-Method: GET&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>access-control
+</code></pre></div>
+
+<ol start="3">
+<li>Send an oversized/nested JSON body and confirm a clean <code>400</code> (not a <code>500</code>); send a <code>union select</code> query param and confirm <code>REP</code> blocks it.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># nested-depth attack</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/payments&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;print(&quot;{\&quot;a\&quot;:&quot;*30 + &quot;1&quot; + &quot;}&quot;*30)&#39;</span><span class="k">)</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Reject abusive payloads with <strong>JSON/XML threat protection</strong> and <strong>regex protection</strong>.</li>
+<li>Enable <strong>CORS</strong> correctly for browser clients (explicit origins, preflight).</li>
+<li><strong>Mask</strong> sensitive data in traces/analytics and know masking ≠ response stripping.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why is <code>AllowOrigins=*</code> + <code>AllowCredentials=true</code> rejected?</li>
+<li>Does a mask config change what the <em>client</em> receives?</li>
+<li>Where should threat protection live so all proxies inherit it?</li>
+</ol>
+<p><strong>Next:</strong> Day 18 — the profile that ties the whole security week together: <strong>FAPI 1.0 Advanced</strong>, requirement by requirement.</p><div class="pager">
+<a class="prev" href="day-16.html">&larr; Day 16</a>
+<a class="next" href="day-18.html">Day 18 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

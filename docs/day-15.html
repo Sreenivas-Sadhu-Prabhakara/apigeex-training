@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 15 — OAuth authorization code + PKCE & JWT · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li class="active"><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Security &middot; Week 3 &middot; ~65 min</div><h1 id="day-15-oauth-authorization-code-pkce-jwt">Day 15 — OAuth authorization code + PKCE &amp; JWT</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll implement the user-present <strong>authorization-code + PKCE</strong> flow on Apigee, and mint/verify <strong>JWTs</strong> with GenerateJWT/VerifyJWT — the exact pieces Open Banking's consent and <code>id_token</code> need.</p>
+<p><strong>Builds on Day 14:</strong> same OAuthV2 policy, new operations; JWTs become the token format FAPI requires.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Client credentials is machine-to-machine. But account access requires a <strong>human</strong> (the bank customer) to authorize a TPP — that's the authorization-code grant. <strong>PKCE</strong> hardens it against code interception. And FAPI mandates <strong>JWTs</strong>: signed request objects, signed <code>id_token</code>s, and (Day 18) JWT-secured responses. Today you build both halves.</p>
+<h2 id="authorization-code-pkce-end-to-end">Authorization-code + PKCE, end to end</h2>
+<div class="codehilite"><pre><span></span><code>1. App → /authorize?response_type=code&amp;client_id=..&amp;redirect_uri=..
+            &amp;scope=accounts&amp;state=..&amp;code_challenge=..&amp;code_challenge_method=S256
+2. Apigee authenticates the user (delegated to your login app/IdP),
+   the user consents, Apigee issues an authorization code → redirect back with ?code=..
+3. App → /token  grant_type=authorization_code&amp;code=..&amp;code_verifier=..
+4. Apigee verifies code + PKCE, returns access_token (+ refresh_token, id_token)
+</code></pre></div>
+
+<h3 id="the-authorize-endpoint">The /authorize endpoint</h3>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/OA-GenerateAuthCode.xml --&gt;</span>
+<span class="nt">&lt;OAuthV2</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;OA-GenerateAuthCode&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Operation&gt;</span>GenerateAuthorizationCode<span class="nt">&lt;/Operation&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GenerateResponse</span><span class="w"> </span><span class="na">enabled=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- PKCE: capture and store the challenge with the code --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Attributes&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Attribute</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;code_challenge&quot;</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;request.queryparam.code_challenge&quot;</span><span class="w"> </span><span class="na">display=</span><span class="s">&quot;false&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Attribute</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;code_challenge_method&quot;</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;request.queryparam.code_challenge_method&quot;</span><span class="w"> </span><span class="na">display=</span><span class="s">&quot;false&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Attributes&gt;</span>
+<span class="nt">&lt;/OAuthV2&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>In a real deployment the <code>/authorize</code> flow first <strong>authenticates the user</strong> (redirect to your login UI / IdP) and renders a <strong>consent screen</strong>, then runs <code>GenerateAuthorizationCode</code>. Apigee mints the code; your UI handles the human steps.</p>
+</blockquote>
+<h3 id="the-token-endpoint-auth-code-grant-pkce-verification">The /token endpoint (auth-code grant + PKCE verification)</h3>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/OA-RedeemCode.xml --&gt;</span>
+<span class="nt">&lt;OAuthV2</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;OA-RedeemCode&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Operation&gt;</span>GenerateAccessToken<span class="nt">&lt;/Operation&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpiresIn&gt;</span>300000<span class="nt">&lt;/ExpiresIn&gt;</span>
+<span class="w">  </span><span class="nt">&lt;RefreshTokenExpiresIn&gt;</span>86400000<span class="nt">&lt;/RefreshTokenExpiresIn&gt;</span>
+<span class="w">  </span><span class="nt">&lt;SupportedGrantTypes&gt;&lt;GrantType&gt;</span>authorization_code<span class="nt">&lt;/GrantType&gt;&lt;/SupportedGrantTypes&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GrantType&gt;</span>request.formparam.grant_type<span class="nt">&lt;/GrantType&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Code&gt;</span>request.formparam.code<span class="nt">&lt;/Code&gt;</span>
+<span class="w">  </span><span class="nt">&lt;GenerateResponse</span><span class="w"> </span><span class="na">enabled=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/OAuthV2&gt;</span>
+</code></pre></div>
+
+<p>PKCE verification (compare <code>code_verifier</code> → SHA256 → base64url against the stored <code>code_challenge</code>) is done in a small step before redeem: read the stored challenge from the code's attributes, recompute from <code>code_verifier</code>, and RaiseFault on mismatch. Apigee exposes the code's stored attributes after a <code>VerifyAuthorizationCode</code>-style lookup; a JavaScript step computes <code>BASE64URL(SHA256(code_verifier))</code> and compares.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// resources/jsc/verifyPkce.js  (S256)</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">crypto</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;crypto&#39;</span><span class="p">);</span><span class="w">           </span><span class="c1">// available in Apigee JS callout</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">verifier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;request.formparam.code_verifier&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">stored</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;oauthv2authcode.OA-LookupCode.code_challenge&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">hash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">createHash</span><span class="p">(</span><span class="s1">&#39;sha256&#39;</span><span class="p">).</span><span class="nx">update</span><span class="p">(</span><span class="nx">verifier</span><span class="p">).</span><span class="nx">digest</span><span class="p">(</span><span class="s1">&#39;base64&#39;</span><span class="p">)</span>
+<span class="w">             </span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/\+/g</span><span class="p">,</span><span class="s1">&#39;-&#39;</span><span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/\//g</span><span class="p">,</span><span class="s1">&#39;_&#39;</span><span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/=+$/</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">);</span><span class="w"> </span><span class="c1">// base64url</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;pkce.valid&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">hash</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">stored</span><span class="p">).</span><span class="nx">toString</span><span class="p">());</span>
+</code></pre></div>
+
+<h2 id="jwt-policies">JWT policies</h2>
+<p>Three policies cover the JWT lifecycle:</p>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Job</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GenerateJWT</strong></td>
+<td>Sign a JWT (e.g. an <code>id_token</code>)</td>
+</tr>
+<tr>
+<td><strong>VerifyJWT</strong></td>
+<td>Validate signature, issuer, audience, expiry</td>
+</tr>
+<tr>
+<td><strong>DecodeJWT</strong></td>
+<td>Read claims <em>without</em> verifying (e.g. to inspect before routing)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mint-a-signed-id_token">Mint a signed id_token</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;GenerateJWT</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;JWT-IdToken&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>JWT-IdToken<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Algorithm&gt;</span>RS256<span class="nt">&lt;/Algorithm&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- private key from a keystore (Day 16) --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;PrivateKey&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Value</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;private.signing.key&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/PrivateKey&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Subject&gt;</span>{oauthv2accesstoken.OA-RedeemCode.developer.id}<span class="nt">&lt;/Subject&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Issuer&gt;</span>https://{RUNTIME_HOST}<span class="nt">&lt;/Issuer&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Audience&gt;</span>{client_id}<span class="nt">&lt;/Audience&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpiresIn&gt;</span>5m<span class="nt">&lt;/ExpiresIn&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AdditionalClaims&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Claim</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;scope&quot;</span><span class="nt">&gt;</span>{scope}<span class="nt">&lt;/Claim&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Claim</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;acr&quot;</span><span class="nt">&gt;</span>urn:openbanking:psd2:sca<span class="nt">&lt;/Claim&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/AdditionalClaims&gt;</span>
+<span class="w">  </span><span class="nt">&lt;OutputVariable&gt;</span>jwt.idtoken<span class="nt">&lt;/OutputVariable&gt;</span>
+<span class="nt">&lt;/GenerateJWT&gt;</span>
+</code></pre></div>
+
+<h3 id="verify-an-incoming-jwt-eg-a-tpps-signed-request-object">Verify an incoming JWT (e.g. a TPP's signed request object)</h3>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;VerifyJWT</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;JWT-VerifyRequestObject&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Algorithm&gt;</span>PS256<span class="nt">&lt;/Algorithm&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>request.formparam.request<span class="nt">&lt;/Source&gt;</span><span class="w">     </span><span class="cm">&lt;!-- the request object JWT --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;PublicKey&gt;</span>
+<span class="w">    </span><span class="cm">&lt;!-- TPP&#39;s JWKS, fetched from the OB directory (Day 24) --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;JWKS</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;tpp.jwks&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/PublicKey&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Issuer&gt;</span>{tpp.client_id}<span class="nt">&lt;/Issuer&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Audience&gt;</span>https://{RUNTIME_HOST}<span class="nt">&lt;/Audience&gt;</span>
+<span class="nt">&lt;/VerifyJWT&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>FAPI uses <code>PS256</code> (RSASSA-PSS), not <code>RS256</code>,</strong> for signing — keep that in mind for Day 18/19. <code>DecodeJWT</code> is handy to read a token's <code>kid</code>/<code>iss</code> <em>before</em> deciding which key to verify with.</p>
+</blockquote>
+<h2 id="lab-auth-code-pkce-round-trip">Lab — auth code + PKCE round trip</h2>
+<ol>
+<li>Build an <code>/authorize</code> flow (GenerateAuthorizationCode) and a <code>/token</code> flow (auth-code grant + PKCE JS check).</li>
+<li>Generate a PKCE pair locally and run the flow:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># create a PKCE verifier + S256 challenge</span>
+<span class="nv">VERIFIER</span><span class="o">=</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">48</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;=+/&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-c1-43<span class="k">)</span>
+<span class="nv">CHALLENGE</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span><span class="w"> </span><span class="s1">&#39;%s&#39;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VERIFIER</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>openssl<span class="w"> </span>dgst<span class="w"> </span>-sha256<span class="w"> </span>-binary<span class="w"> </span><span class="p">|</span><span class="w"> </span>openssl<span class="w"> </span>base64<span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span><span class="s1">&#39;+/&#39;</span><span class="w"> </span><span class="s1">&#39;-_&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;=&#39;</span><span class="k">)</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;verifier=</span><span class="nv">$VERIFIER</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;challenge=</span><span class="nv">$CHALLENGE</span><span class="s2">&quot;</span>
+<span class="c1"># Step 1: open /authorize?...&amp;code_challenge=$CHALLENGE&amp;code_challenge_method=S256 in a browser,</span>
+<span class="c1">#         complete the (mock) consent, capture ?code=XYZ from the redirect.</span>
+<span class="c1"># Step 3: redeem:</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/oauth-v1/oauth/token&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=authorization_code&amp;code=XYZ&amp;code_verifier=</span><span class="nv">$VERIFIER</span><span class="s2">&amp;client_id=</span><span class="nv">$CK</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</code></pre></div>
+
+<ol start="3">
+<li>Add <code>JWT-IdToken</code> to the token response and decode the returned <code>id_token</code> at jwt.io to inspect the claims.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Implement <strong>authorization-code + PKCE</strong> with GenerateAuthorizationCode and the S256 check.</li>
+<li><strong>Mint</strong> signed JWTs (GenerateJWT) and <strong>verify</strong> TPP JWTs (VerifyJWT), reading claims with DecodeJWT.</li>
+<li>Know FAPI's algorithm preference (<strong>PS256</strong>) for later.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>What attack does PKCE specifically defend against?</li>
+<li>Which JWT policy reads claims <em>without</em> checking the signature?</li>
+<li>Which signing algorithm does FAPI Advanced require?</li>
+</ol>
+<p><strong>Next:</strong> Day 16 — the <em>transport</em> layer those keys live in: <strong>TLS, mutual TLS, keystores and truststores</strong>.</p><div class="pager">
+<a class="prev" href="day-14.html">&larr; Day 14</a>
+<a class="next" href="day-16.html">Day 16 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

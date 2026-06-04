@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 22 — AISP: account information APIs · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li class="active"><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Open Banking &middot; Week 4 &middot; ~70 min</div><h1 id="day-22-aisp-account-information-apis">Day 22 — AISP: account information APIs</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll expose the OBIE <strong>Accounts, Balances, and Transactions</strong> endpoints, each gated by the consent guard with the <em>right permission</em>, returning spec-shaped responses with correct FAPI headers and pagination.</p>
+<p><strong>Builds on Day 21:</strong> every endpoint here reuses <code>sf-consent-guard</code>; today you set the per-endpoint <code>requiredPermission</code> and shape OBIE responses.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>This is what an AISP actually consumes — the data layer behind every budgeting and aggregation app. It's also where consent meets <em>granularity</em>: a consent for <code>ReadBalances</code> must not be able to read transactions. Mapping endpoints → required permissions correctly is the security crux of AISP.</p>
+<h2 id="endpoint-permission-map">Endpoint → permission map</h2>
+<table>
+<thead>
+<tr>
+<th>Method &amp; path</th>
+<th>Returns</th>
+<th>Required permission</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /accounts</code></td>
+<td>List of consented accounts</td>
+<td><code>ReadAccountsBasic</code> / <code>ReadAccountsDetail</code></td>
+</tr>
+<tr>
+<td><code>GET /accounts/{AccountId}</code></td>
+<td>One account</td>
+<td><code>ReadAccountsDetail</code></td>
+</tr>
+<tr>
+<td><code>GET /accounts/{AccountId}/balances</code></td>
+<td>Balances</td>
+<td><code>ReadBalances</code></td>
+</tr>
+<tr>
+<td><code>GET /accounts/{AccountId}/transactions</code></td>
+<td>Transactions (paged)</td>
+<td><code>ReadTransactionsDetail</code> (+ Credits/Debits)</td>
+</tr>
+<tr>
+<td><code>GET /balances</code></td>
+<td>Balances across all consented accounts</td>
+<td><code>ReadBalances</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Filtering by consent:</strong> <code>GET /accounts</code> returns <strong>only</strong> the accounts the PSU selected during authorization — not every account the customer holds. Store the selected account list with the consent at authorization time and filter against it here.</p>
+</blockquote>
+<h2 id="wire-an-endpoint-with-the-consent-guard">Wire an endpoint with the consent guard</h2>
+<p>Set the required permission, then call the shared guard, then fetch from core via TargetServer:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;GetTransactions&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>MatchesPath<span class="w"> </span>&quot;/accounts/{AccountId}/transactions&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;GET&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-AccountId<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-RequirePermission-Tx<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">   </span><span class="cm">&lt;!-- sets consent.requiredPermission --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>FC-ConsentGuard<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">           </span><span class="cm">&lt;!-- sf-consent-guard: status+expiry+permission --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-AccountNotConsented<span class="nt">&lt;/Name&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Condition&gt;</span>NOT<span class="w"> </span>(consent.accounts<span class="w"> </span>~~<span class="w"> </span>ob.AccountId)<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Response&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-ShapeTransactions<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">      </span><span class="cm">&lt;!-- map core → OBIE schema --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-PaginationLinks<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Response&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-RequirePermission-Tx&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;&lt;Name&gt;</span>consent.requiredPermission<span class="nt">&lt;/Name&gt;&lt;Value&gt;</span>ReadTransactionsDetail<span class="nt">&lt;/Value&gt;&lt;/AssignVariable&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<h2 id="obie-response-shape">OBIE response shape</h2>
+<p>OBIE responses follow a strict envelope: <code>Data</code>, <code>Links</code>, <code>Meta</code>. Map your core banking response into it:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// resources/jsc/shapeTransactions.js — core → OBIE v3.1</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">core</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;coreResponse.content&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;{}&#39;</span><span class="p">);</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">accountId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;ob.AccountId&#39;</span><span class="p">);</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">txns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">core</span><span class="p">.</span><span class="nx">transactions</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">[]).</span><span class="nx">map</span><span class="p">(</span><span class="kd">function</span><span class="w"> </span><span class="p">(</span><span class="nx">t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">AccountId</span><span class="o">:</span><span class="w"> </span><span class="nx">accountId</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">TransactionId</span><span class="o">:</span><span class="w"> </span><span class="nx">t</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">CreditDebitIndicator</span><span class="o">:</span><span class="w"> </span><span class="nx">t</span><span class="p">.</span><span class="nx">amount</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;Credit&#39;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Debit&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">Status</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Booked&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">BookingDateTime</span><span class="o">:</span><span class="w"> </span><span class="nx">t</span><span class="p">.</span><span class="nx">bookedAt</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">Amount</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Amount</span><span class="o">:</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">abs</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">amount</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mf">2</span><span class="p">),</span><span class="w"> </span><span class="nx">Currency</span><span class="o">:</span><span class="w"> </span><span class="nx">t</span><span class="p">.</span><span class="nx">currency</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nx">TransactionInformation</span><span class="o">:</span><span class="w"> </span><span class="nx">t</span><span class="p">.</span><span class="nx">description</span>
+<span class="w">  </span><span class="p">};</span>
+<span class="p">});</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">self</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;proxy.url&#39;</span><span class="p">);</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">body</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">Data</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Transaction</span><span class="o">:</span><span class="w"> </span><span class="nx">txns</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nx">Links</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Self</span><span class="o">:</span><span class="w"> </span><span class="nx">self</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nx">Meta</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">TotalPages</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="w"> </span><span class="p">}</span>
+<span class="p">};</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;response.content&#39;</span><span class="p">,</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">body</span><span class="p">));</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;response.header.Content-Type&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;application/json&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<h2 id="fapi-response-headers">FAPI response headers</h2>
+<p>Every AISP response must echo/emit the FAPI traceability headers (you built the inbound check on Day 12):</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-FapiResponseHeaders&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Headers&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;x-fapi-interaction-id&quot;</span><span class="nt">&gt;</span>{fapi.interactionId}<span class="nt">&lt;/Header&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/Headers&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;response&quot;</span><span class="nt">&gt;</span>response<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<h2 id="pagination">Pagination</h2>
+<p>Transactions are paged. OBIE uses <code>?page=</code> with <code>Links.Next</code>/<code>Links.Prev</code> and <code>Meta.TotalPages</code>. Build links from the request URL:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-PaginationLinks&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;&lt;Name&gt;</span>ob.page<span class="nt">&lt;/Name&gt;&lt;Template&gt;</span>{request.queryparam.page}<span class="nt">&lt;/Template&gt;&lt;Value&gt;</span>1<span class="nt">&lt;/Value&gt;&lt;/AssignVariable&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- JS-ShapeTransactions can append Links.Next when more pages exist --&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<h2 id="lab-serve-consented-aisp-data">Lab — serve consented AISP data</h2>
+<ol>
+<li>Build the <code>aisp-resources</code> proxy with <code>GET /accounts</code>, <code>/accounts/{id}/balances</code>, <code>/accounts/{id}/transactions</code>, each setting its <code>requiredPermission</code> and calling <code>FC-ConsentGuard</code>.</li>
+<li>Point the TargetEndpoint at the <code>core-banking</code> TargetServer (mock).</li>
+<li>Run with an <strong>Authorised</strong> consent token and check enforcement:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># accounts: returns only consented accounts</span>
+curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;.../v3.1/aisp/accounts&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$AC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.Data.Account[].AccountId&#39;</span>
+
+<span class="c1"># balances: needs ReadBalances — present → 200</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span><span class="s2">&quot;.../v3.1/aisp/accounts/22289/balances&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$AC_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span>
+
+<span class="c1"># transactions with a consent that LACKS ReadTransactionsDetail → 403 UK.OBIE.Resource.InvalidConsentStatus</span>
+curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;.../v3.1/aisp/accounts/22289/transactions&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$AC_TOKEN_NO_TX</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</code></pre></div>
+
+<ol start="4">
+<li>Confirm an account <strong>not</strong> in the consent's selected list returns <code>403</code>/<code>404</code> even with a valid token.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Map each AISP endpoint to its <strong>required permission</strong> and enforce it.</li>
+<li>Filter <code>/accounts</code> to the PSU's <strong>consented accounts</strong> only.</li>
+<li>Shape core responses into the <strong>OBIE <code>Data</code>/<code>Links</code>/<code>Meta</code></strong> envelope with pagination and FAPI headers.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>A token's consent has <code>ReadBalances</code> but not <code>ReadTransactionsDetail</code>. What should <code>/transactions</code> return?</li>
+<li>Why might <code>/accounts</code> return fewer accounts than the customer actually holds?</li>
+<li>Which three top-level keys make up the OBIE response envelope?</li>
+</ol>
+<p><strong>Next:</strong> Day 23 — money moves: the <strong>PISP payment-initiation</strong> flow with idempotency and funds confirmation.</p><div class="pager">
+<a class="prev" href="day-21.html">&larr; Day 21</a>
+<a class="next" href="day-23.html">Day 23 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

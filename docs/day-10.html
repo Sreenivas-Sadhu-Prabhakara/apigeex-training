@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 10 — Caching: response, lookup/populate & KVM · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li class="active"><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Mediation &middot; Week 2 &middot; ~55 min</div><h1 id="day-10-caching-response-lookuppopulate-kvm">Day 10 — Caching: response, lookup/populate &amp; KVM</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll cut latency and backend load with <strong>ResponseCache</strong>, store arbitrary values with <strong>LookupCache/PopulateCache</strong>, and keep config and lightweight secrets in <strong>Key Value Maps (KVMs)</strong>.</p>
+<p><strong>Builds on Day 9:</strong> caching is what stops you repeating that ServiceCallout (e.g. a funds-confirmation token) on every request.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Backends are the bottleneck and the cost center. Caching a reference-data response, or a backend OAuth token, can remove thousands of southbound calls. KVMs give you a place to store per-environment config (URLs, client ids) and small secrets without redeploying the bundle.</p>
+<h2 id="responsecache-cache-a-whole-backend-response">ResponseCache — cache a whole backend response</h2>
+<p>Best for idempotent <code>GET</code>s on reference data (currencies, branch lists, product catalogs). It short-circuits the backend on a hit.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;ResponseCache</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;RC-Reference&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>RC-Reference<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;CacheKey&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Prefix&gt;</span>refdata<span class="nt">&lt;/Prefix&gt;</span>
+<span class="w">    </span><span class="cm">&lt;!-- vary the key by path + a query param so different requests cache separately --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;KeyFragment</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;proxy.pathsuffix&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;KeyFragment</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;request.queryparam.type&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/CacheKey&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpirySettings&gt;</span>
+<span class="w">    </span><span class="nt">&lt;TimeoutInSeconds&gt;</span>3600<span class="nt">&lt;/TimeoutInSeconds&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/ExpirySettings&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- only cache successful responses --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExcludeErrorResponse&gt;</span>true<span class="nt">&lt;/ExcludeErrorResponse&gt;</span>
+<span class="nt">&lt;/ResponseCache&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Attach <strong>one</strong> ResponseCache policy and reference it in <strong>both</strong> the Request flow (lookup) and the Response flow (store). Apigee handles the two phases from the single policy: on the request side it checks the cache and skips the target on a hit; on the response side it populates the cache.</p>
+<p><strong>Never</strong> ResponseCache an Open Banking account or transaction response — it's per-consumer, consent-bound, and changes constantly. Cache <em>reference data and tokens</em>, not customer data.</p>
+</blockquote>
+<h2 id="lookupcache-populatecache-cache-a-value-you-compute">LookupCache / PopulateCache — cache a value you compute</h2>
+<p>When you want to cache <em>one value</em> (not a whole response) — classically a backend access token from a ServiceCallout — use the pair explicitly.</p>
+<p>Lookup first:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;LookupCache</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;LC-BackendToken&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;CacheKey&gt;&lt;KeyFragment&gt;</span>backend-token<span class="nt">&lt;/KeyFragment&gt;&lt;/CacheKey&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo&gt;</span>private.backend.token<span class="nt">&lt;/AssignTo&gt;</span><span class="w">   </span><span class="cm">&lt;!-- sets this var if found --&gt;</span>
+<span class="nt">&lt;/LookupCache&gt;</span>
+</code></pre></div>
+
+<p>Then, only if it missed, fetch and populate:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;PopulateCache</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;PC-BackendToken&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;CacheKey&gt;&lt;KeyFragment&gt;</span>backend-token<span class="nt">&lt;/KeyFragment&gt;&lt;/CacheKey&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- store the token you just fetched; expire a little before it really does --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>fetched.access_token<span class="nt">&lt;/Source&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ExpirySettings&gt;&lt;TimeoutInSeconds&gt;</span>3000<span class="nt">&lt;/TimeoutInSeconds&gt;&lt;/ExpirySettings&gt;</span>
+<span class="nt">&lt;/PopulateCache&gt;</span>
+</code></pre></div>
+
+<p>Pattern in the flow:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Request&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>LC-BackendToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- fetch a new token only on a cache miss --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Name&gt;</span>SC-GetBackendToken<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>private.backend.token<span class="w"> </span>=<span class="w"> </span>null<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Name&gt;</span>PC-BackendToken<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>private.backend.token<span class="w"> </span>=<span class="w"> </span>null<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Step&gt;</span>
+<span class="nt">&lt;/Request&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>The <code>private.</code> prefix marks a variable as <strong>sensitive</strong> — Apigee masks it in Debug/trace by default. Use it for tokens and secrets.</p>
+</blockquote>
+<h2 id="key-value-maps-kvm-config-light-secrets">Key Value Maps (KVM) — config &amp; light secrets</h2>
+<p>A KVM is a named, per-environment (or per-org) store of key/value pairs. Use it for backend URLs, client ids, feature flags, and small secrets you don't want in the bundle.</p>
+<p>Create and seed a KVM:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># encrypted KVM, scoped to the environment</span>
+apigeecli<span class="w"> </span>kvms<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>ob-config<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+apigeecli<span class="w"> </span>kvms<span class="w"> </span>entries<span class="w"> </span>create<span class="w"> </span>--map<span class="w"> </span>ob-config<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--key<span class="w"> </span>core-banking-base-url<span class="w"> </span>--value<span class="w"> </span><span class="s2">&quot;https://mocktarget.apigee.com&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>Read it at runtime with the <strong>KeyValueMapOperations</strong> policy:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;KeyValueMapOperations</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;KVM-GetConfig&quot;</span><span class="w"> </span><span class="na">mapIdentifier=</span><span class="s">&quot;ob-config&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Scope&gt;</span>environment<span class="nt">&lt;/Scope&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Get</span><span class="w"> </span><span class="na">assignTo=</span><span class="s">&quot;config.coreBankingBaseUrl&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Key&gt;&lt;Parameter&gt;</span>core-banking-base-url<span class="nt">&lt;/Parameter&gt;&lt;/Key&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Get&gt;</span>
+<span class="nt">&lt;/KeyValueMapOperations&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>KVMs are <strong>encrypted</strong> in Apigee X. They're great for config and low-sensitivity secrets, but for client secrets and signing keys prefer the proper mechanisms you'll meet in the security week (keystores, GenerateJWT, and a secrets manager via callout).</p>
+</blockquote>
+<h2 id="lab-cache-a-backend-token-read-config-from-kvm">Lab — cache a backend token + read config from KVM</h2>
+<ol>
+<li>Create the <code>ob-config</code> KVM and a <code>core-banking-base-url</code> entry.</li>
+<li>Add <code>KVM-GetConfig</code> to PreFlow.Request and confirm <code>config.coreBankingBaseUrl</code> is populated (surface it as a debug header).</li>
+<li>Add the LookupCache/PopulateCache token pattern around a ServiceCallout (reuse <code>SC-FundsCheck</code> as a stand-in token fetch). Fire the same request twice and confirm the second call <strong>skips</strong> the callout (watch the Debug trace — no second SC transaction).</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--proxy-folder<span class="w"> </span>./hello-v1/apiproxy<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--rev<span class="w"> </span><span class="m">6</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Use <strong>ResponseCache</strong> for idempotent reference responses (and know not to cache customer data).</li>
+<li>Cache a single computed value with <strong>LookupCache/PopulateCache</strong> + conditional refetch.</li>
+<li>Store and read per-environment config/secrets in <strong>KVMs</strong>, masking secrets with <code>private.</code>.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why is it wrong to ResponseCache an AISP <code>/transactions</code> response?</li>
+<li>What does the <code>private.</code> variable prefix change about tracing?</li>
+<li>Which caching tool fits "cache the backend OAuth token for 50 minutes"?</li>
+</ol>
+<p><strong>Next:</strong> Day 11 — when things go wrong on purpose: <strong>RaiseFault, FaultRules, and DefaultFaultRule</strong> for predictable errors.</p><div class="pager">
+<a class="prev" href="day-09.html">&larr; Day 09</a>
+<a class="next" href="day-11.html">Day 11 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

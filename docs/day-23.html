@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 23 — PISP: payment initiation APIs · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li class="active"><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Open Banking &middot; Week 4 &middot; ~75 min</div><h1 id="day-23-pisp-payment-initiation-apis">Day 23 — PISP: payment initiation APIs</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll implement the <strong>domestic payment</strong> flow — create a payment <em>consent</em>, have the PSU authorize it, then <em>submit</em> the payment — with <strong>idempotency</strong>, <strong>detached JWS signature</strong> validation, and a <strong>funds-confirmation</strong> check.</p>
+<p><strong>Builds on Days 21–22:</strong> payments reuse the consent pattern, but the consent is <em>single-payment</em> and the stakes (and validation) are higher.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Payments are irreversible and high-value, so the spec adds protections AISP doesn't have: a <strong>signed</strong> request body (<code>x-jws-signature</code>), strict <strong>idempotency</strong> so a retried request never double-pays, and a <strong>funds check</strong>. This is where correctness is non-negotiable.</p>
+<h2 id="the-two-step-payment-model">The two-step payment model</h2>
+<div class="codehilite"><pre><span></span><code>1. POST /domestic-payment-consents   → DomesticPaymentConsentId, Status=AwaitingAuthorisation
+   (the TPP declares Initiation: amount, creditor, reference — IMMUTABLE once set)
+2. PSU authorizes that consent (FAPI auth-code) → Status=Authorised, token carries ConsentId
+3. POST /domestic-payments           → submit; Apigee validates the body == the consented Initiation
+   → Status=AcceptedSettlementInProcess (then settlement async)
+</code></pre></div>
+
+<p>Payment consent statuses: <code>AwaitingAuthorisation</code> → <code>Authorised</code> / <code>Rejected</code> → (<code>Consumed</code> after the payment is created).
+Payment statuses: <code>AcceptedSettlementInProcess</code>, <code>AcceptedSettlementCompleted</code>, <code>Pending</code>, <code>Rejected</code>.</p>
+<h2 id="1-create-the-payment-consent">1 — Create the payment consent</h2>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/open-banking/v3.1/pisp/domestic-payment-consents&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$CC_TOKEN_PAYMENTS</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-idempotency-key: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-jws-signature: </span><span class="nv">$DETACHED_JWS</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
+<span class="s1">    &quot;Data&quot;: {</span>
+<span class="s1">      &quot;Initiation&quot;: {</span>
+<span class="s1">        &quot;InstructionIdentification&quot;: &quot;ACME-INSTR-001&quot;,</span>
+<span class="s1">        &quot;EndToEndIdentification&quot;: &quot;E2E-001&quot;,</span>
+<span class="s1">        &quot;InstructedAmount&quot;: { &quot;Amount&quot;: &quot;25.00&quot;, &quot;Currency&quot;: &quot;GBP&quot; },</span>
+<span class="s1">        &quot;CreditorAccount&quot;: {</span>
+<span class="s1">          &quot;SchemeName&quot;: &quot;UK.OBIE.SortCodeAccountNumber&quot;,</span>
+<span class="s1">          &quot;Identification&quot;: &quot;08080021325698&quot;,</span>
+<span class="s1">          &quot;Name&quot;: &quot;ACME Coffee Ltd&quot;</span>
+<span class="s1">        },</span>
+<span class="s1">        &quot;RemittanceInformation&quot;: { &quot;Reference&quot;: &quot;Invoice-22&quot;, &quot;Unstructured&quot;: &quot;Thanks&quot; }</span>
+<span class="s1">      }</span>
+<span class="s1">    },</span>
+<span class="s1">    &quot;Risk&quot;: { &quot;PaymentContextCode&quot;: &quot;EcommerceGoods&quot; }</span>
+<span class="s1">  }&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</code></pre></div>
+
+<h2 id="2-validate-the-detached-jws-signature">2 — Validate the detached JWS signature</h2>
+<p>The TPP signs the body with its <strong>OBSEAL</strong> key; the signature travels in <code>x-jws-signature</code> as a <strong>detached</strong> JWS (header + ".." + signature, no payload). You reconstruct and verify it:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CreatePaymentConsent&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/domestic-payment-consents&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-VerifyToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                </span><span class="cm">&lt;!-- scope=payments --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-MissingJws<span class="nt">&lt;/Name&gt;&lt;Condition&gt;</span>request.header.x-jws-signature<span class="w"> </span>=<span class="w"> </span>null<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-ReconstructJws<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">             </span><span class="cm">&lt;!-- header + &#39;.&#39; + base64url(body) + &#39;.&#39; + sig --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-VerifyDetachedJws<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">         </span><span class="cm">&lt;!-- VerifyJWT (PS256) against TPP OBSEAL JWKS --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-ValidateInitiation<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">         </span><span class="cm">&lt;!-- amount&gt;0, currency, scheme valid --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-Idempotency<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-MintPaymentConsentId<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>KVM-StorePaymentConsent<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">       </span><span class="cm">&lt;!-- store Initiation immutably --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-PaymentConsentResponse<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1">// resources/jsc/reconstructJws.js — rebuild detached JWS for verification</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">jws</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;request.header.x-jws-signature&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">parts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">jws</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">);</span><span class="w">                 </span><span class="c1">// header..signature  (middle empty = detached)</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">body</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">getVariable</span><span class="p">(</span><span class="s1">&#39;request.content&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="kd">var</span><span class="w"> </span><span class="nx">b64url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">Buffer</span><span class="p">.</span><span class="kr">from</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;utf8&#39;</span><span class="p">).</span><span class="nx">toString</span><span class="p">(</span><span class="s1">&#39;base64&#39;</span><span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/\+/g</span><span class="p">,</span><span class="s1">&#39;-&#39;</span><span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/\//g</span><span class="p">,</span><span class="s1">&#39;_&#39;</span><span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/=+$/</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">);</span>
+<span class="p">};</span>
+<span class="nx">context</span><span class="p">.</span><span class="nx">setVariable</span><span class="p">(</span><span class="s1">&#39;jws.reconstructed&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">parts</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">b64url</span><span class="p">(</span><span class="nx">body</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">parts</span><span class="p">[</span><span class="mf">2</span><span class="p">]);</span>
+</code></pre></div>
+
+<h2 id="3-idempotency-never-double-pay">3 — Idempotency (never double-pay)</h2>
+<p><code>x-idempotency-key</code> must make a retried, identical request safe. Cache the key → response for ≥24h; on a repeat key, <strong>return the original response</strong> instead of re-creating the payment.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>LC-Idempotency<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">   </span><span class="cm">&lt;!-- LookupCache by x-idempotency-key --&gt;</span>
+<span class="nt">&lt;Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Name&gt;</span>AM-ReplayStoredResponse<span class="nt">&lt;/Name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>idempotency.storedResponse<span class="w"> </span>!=<span class="w"> </span>null<span class="nt">&lt;/Condition&gt;</span>
+<span class="nt">&lt;/Step&gt;</span>
+<span class="cm">&lt;!-- only if not a replay do we create + then PopulateCache the response --&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Idempotency vs the body:</strong> the spec requires the <em>same key + same body</em> to be idempotent, and the <em>same key + different body</em> to be a <code>400</code>. Hash the body and store it with the key; compare on replay.</p>
+</blockquote>
+<h2 id="4-submit-the-payment-post-domestic-payments">4 — Submit the payment (<code>POST /domestic-payments</code>)</h2>
+<p>The submission body's <code>Initiation</code> <strong>must exactly equal</strong> the consented Initiation. Re-validate, optionally funds-check, then call the core payment rail.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CreatePayment&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/domestic-payments&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>OA-VerifyToken<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-VerifyDetachedJws<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-ConsentIdFromBody<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>KVM-GetPaymentConsent<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-ConsentNotAuthorised<span class="nt">&lt;/Name&gt;&lt;Condition&gt;</span>pcons.status<span class="w"> </span>!=<span class="w"> </span>&quot;Authorised&quot;<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-AssertInitiationMatches<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">     </span><span class="cm">&lt;!-- body.Initiation == consented Initiation --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>SC-FundsCheck<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                  </span><span class="cm">&lt;!-- optional CoF (Day 9) --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>RF-InsufficientFunds<span class="nt">&lt;/Name&gt;&lt;Condition&gt;</span>funds.fundsAvailable<span class="w"> </span>=<span class="w"> </span>&quot;false&quot;<span class="nt">&lt;/Condition&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>SC-SubmitToRail<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                </span><span class="cm">&lt;!-- core payment system --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-PaymentAcceptedResponse<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">     </span><span class="cm">&lt;!-- Status=AcceptedSettlementInProcess --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<h2 id="lab-a-complete-payment">Lab — a complete payment</h2>
+<ol>
+<li>Build the <code>pisp</code> proxy: <code>/domestic-payment-consents</code> (POST + GET), <code>/domestic-payments</code> (POST + GET status).</li>
+<li>Run the flow with a valid consent and confirm idempotency:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="nv">IDEM</span><span class="o">=</span><span class="k">$(</span>uuidgen<span class="k">)</span>
+<span class="c1"># first submit</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../pisp/domestic-payments&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$PAY_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-idempotency-key: </span><span class="nv">$IDEM</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-jws-signature: </span><span class="nv">$DETACHED_JWS</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PAYMENT_BODY</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.Data.Status, .Data.DomesticPaymentId&#39;</span>
+<span class="c1"># retry SAME key + SAME body → identical response, NO second payment</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../pisp/domestic-payments&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$PAY_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-idempotency-key: </span><span class="nv">$IDEM</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-jws-signature: </span><span class="nv">$DETACHED_JWS</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PAYMENT_BODY</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.Data.DomesticPaymentId&#39;</span>
+<span class="c1"># same key + DIFFERENT body → 400</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;.../pisp/domestic-payments&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$PAY_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-idempotency-key: </span><span class="nv">$IDEM</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-jws-signature: </span><span class="nv">$DETACHED_JWS</span><span class="s2">&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DIFFERENT_BODY</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<ol start="3">
+<li>Tamper with the body after signing → <code>JWT-VerifyDetachedJws</code> fails → <code>401</code>. This proves message integrity.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Implement the <strong>two-step</strong> payment-consent → submit model with immutable Initiation.</li>
+<li>Validate a <strong>detached JWS</strong> signature against the TPP's OBSEAL key.</li>
+<li>Enforce <strong>idempotency</strong> (same key+body safe; key+different-body rejected) and a <strong>funds check</strong>.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why must the <code>/domestic-payments</code> body's Initiation equal the consent's Initiation?</li>
+<li>What does <code>x-jws-signature</code> protect that mTLS does not?</li>
+<li>Same idempotency key, different body — what status do you return?</li>
+</ol>
+<p><strong>Next:</strong> Day 24 — onboard TPPs at scale: <strong>Dynamic Client Registration</strong>, SSA validation, and certificate-bound tokens.</p><div class="pager">
+<a class="prev" href="day-22.html">&larr; Day 22</a>
+<a class="next" href="day-24.html">Day 24 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

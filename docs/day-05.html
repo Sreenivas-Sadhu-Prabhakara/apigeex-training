@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 05 — Policies 101 & the execution model · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li class="active"><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Proxy Dev &middot; Week 1 &middot; ~55 min</div><h1 id="day-5-policies-101-the-execution-model">Day 5 — Policies 101 &amp; the execution model</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll attach your first policies into flow slots, give the no-route <code>/health</code> endpoint a real response with <strong>AssignMessage</strong>, and be able to predict the exact order policies execute.</p>
+<p><strong>Builds on Day 4:</strong> we fill the <code>&lt;Request&gt;</code>/<code>&lt;Response&gt;</code> slots you created in the conditional flows.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Policies <em>are</em> Apigee. Everything for the next 25 days — quotas, OAuth, JWT, threat protection, FAPI — is a policy attached to a flow slot. Today you learn the universal pattern so every later policy is "same shape, different verbs."</p>
+<h2 id="what-a-policy-is">What a policy is</h2>
+<p>A policy is an XML configuration file in <code>apiproxy/policies/</code>, <strong>referenced by name</strong> from a flow via a <code>&lt;Step&gt;</code>. Two pieces, always:</p>
+<ol>
+<li><strong>The policy file</strong> — <code>policies/AM-HealthResponse.xml</code> (the configuration).</li>
+<li><strong>The attachment</strong> — a <code>&lt;Step&gt;&lt;Name&gt;AM-HealthResponse&lt;/Name&gt;&lt;/Step&gt;</code> inside a flow's <code>&lt;Request&gt;</code> or <code>&lt;Response&gt;</code>.</li>
+</ol>
+<blockquote>
+<p><strong>Naming convention (use it all course):</strong> prefix by policy type — <code>AM-</code> AssignMessage, <code>EV-</code> ExtractVariables, <code>Q-</code> Quota, <code>SA-</code> SpikeArrest, <code>JS-</code> JavaScript, <code>OA-</code> OAuthV2, <code>RF-</code> RaiseFault, <code>VK-</code> VerifyAPIKey. Future-you will thank present-you.</p>
+</blockquote>
+<h2 id="the-attachment-model">The attachment model</h2>
+<div class="codehilite"><pre><span></span><code>policies/AM-HealthResponse.xml   ← the policy definition (one file)
+        ▲ referenced by name
+proxies/default.xml
+   &lt;Flow name=&quot;Health&quot;&gt;
+     &lt;Request&gt;
+        &lt;Step&gt;&lt;Name&gt;AM-HealthResponse&lt;/Name&gt;&lt;/Step&gt;   ← attachment point
+     &lt;/Request&gt;
+   &lt;/Flow&gt;
+</code></pre></div>
+
+<p>A <code>&lt;Step&gt;</code> can itself carry a <code>&lt;Condition&gt;</code>, so you can attach a policy <em>conditionally</em> even inside a flow that already matched.</p>
+<h2 id="your-first-policy-assignmessage">Your first policy: AssignMessage</h2>
+<p><code>AssignMessage</code> builds or modifies a message (the request, the response, or a named variable). It's the swiss-army knife. Here we use it to <strong>synthesize a response</strong> for the <code>/health</code> no-route from Day 4.</p>
+<div class="codehilite"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>hello-v1/apiproxy/policies
+
+cat<span class="w"> </span>&gt;<span class="w"> </span>hello-v1/apiproxy/policies/AM-HealthResponse.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;AssignMessage name=&quot;AM-HealthResponse&quot;&gt;</span>
+<span class="s">  &lt;DisplayName&gt;AM-HealthResponse&lt;/DisplayName&gt;</span>
+<span class="s">  &lt;!-- Build the response message that goes back to the client --&gt;</span>
+<span class="s">  &lt;Set&gt;</span>
+<span class="s">    &lt;Payload contentType=&quot;application/json&quot;&gt;{&quot;status&quot;:&quot;UP&quot;,&quot;proxy&quot;:&quot;hello-v1&quot;}&lt;/Payload&gt;</span>
+<span class="s">    &lt;StatusCode&gt;200&lt;/StatusCode&gt;</span>
+<span class="s">    &lt;ReasonPhrase&gt;OK&lt;/ReasonPhrase&gt;</span>
+<span class="s">  &lt;/Set&gt;</span>
+<span class="s">  &lt;!-- Tell Apigee NOT to look for a backend response; we built it ourselves --&gt;</span>
+<span class="s">  &lt;AssignTo createNew=&quot;false&quot; type=&quot;response&quot;&gt;response&lt;/AssignTo&gt;</span>
+<span class="s">&lt;/AssignMessage&gt;</span>
+<span class="s">XML</span>
+</code></pre></div>
+
+<p>Now attach it. Add a conditional flow in <code>proxies/default.xml</code> and reference the policy in its <code>&lt;Request&gt;</code> (it runs before routing, so the no-route never needs a backend):</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Health&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/health&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;GET&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-HealthResponse<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Response/&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<p>Redeploy and call:</p>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--proxy-folder<span class="w"> </span>./hello-v1/apiproxy<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--rev<span class="w"> </span><span class="m">3</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/health&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<span class="c1"># → {&quot;status&quot;:&quot;UP&quot;,&quot;proxy&quot;:&quot;hello-v1&quot;}</span>
+</code></pre></div>
+
+<h2 id="a-second-policy-add-a-header-to-every-response">A second policy: add a header to every response</h2>
+<p>This shows attaching a policy at the <strong>PostFlow.Response</strong> so it runs for <em>all</em> operations:</p>
+<div class="codehilite"><pre><span></span><code>cat<span class="w"> </span>&gt;<span class="w"> </span>hello-v1/apiproxy/policies/AM-StandardHeaders.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;AssignMessage name=&quot;AM-StandardHeaders&quot;&gt;</span>
+<span class="s">  &lt;Set&gt;</span>
+<span class="s">    &lt;Headers&gt;</span>
+<span class="s">      &lt;Header name=&quot;X-Apigee-Proxy&quot;&gt;hello-v1&lt;/Header&gt;</span>
+<span class="s">      &lt;!-- echo the FAPI interaction id if present; generate one if not --&gt;</span>
+<span class="s">      &lt;Header name=&quot;x-fapi-interaction-id&quot;&gt;{request.header.x-fapi-interaction-id}&lt;/Header&gt;</span>
+<span class="s">    &lt;/Headers&gt;</span>
+<span class="s">  &lt;/Set&gt;</span>
+<span class="s">  &lt;AssignTo createNew=&quot;false&quot; type=&quot;response&quot;&gt;response&lt;/AssignTo&gt;</span>
+<span class="s">&lt;/AssignMessage&gt;</span>
+<span class="s">XML</span>
+</code></pre></div>
+
+<p>Attach it in PostFlow so it's truly cross-cutting:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;PostFlow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;PostFlow&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Response&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-StandardHeaders<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Response&gt;</span>
+<span class="nt">&lt;/PostFlow&gt;</span>
+</code></pre></div>
+
+<h2 id="predicting-execution-order">Predicting execution order</h2>
+<p>Given this proxy, a <code>GET /hello-v1/health</code> runs:</p>
+<div class="codehilite"><pre><span></span><code>ProxyEndpoint.PreFlow.Request          (empty)
+Flow &quot;Health&quot;.Request → AM-HealthResponse   ← response is now built
+ProxyEndpoint.PostFlow.Request         (empty)
+[no RouteRule target → no backend call]
+ProxyEndpoint.PreFlow.Response         (empty)
+Flow &quot;Health&quot;.Response                 (empty)
+ProxyEndpoint.PostFlow.Response → AM-StandardHeaders   ← header added
+</code></pre></div>
+
+<blockquote>
+<p><strong>Mental model:</strong> policies don't "run when attached" — they run <strong>when the flow slot they're attached to is reached</strong>, <em>if</em> the flow's (and step's) condition matches. Order = position in the pipeline, not order in the file.</p>
+</blockquote>
+<h2 id="lab">Lab</h2>
+<ol>
+<li>Add a <code>&lt;Header name="X-Response-Time"&gt;</code> is <em>not</em> trivial (needs a variable) — instead add <code>&lt;Header name="X-Served-By"&gt;apigee-x&lt;/Header&gt;</code> and confirm it appears on <strong>every</strong> endpoint, including <code>/health</code> and <code>/json</code>.</li>
+<li>Put a <code>&lt;Condition&gt;</code> on the <code>AM-StandardHeaders</code> <em>Step</em> so it only adds the header when <code>request.verb = "GET"</code>. Verify a <code>POST</code> doesn't get it.</li>
+<li>Open a <strong>Debug/Trace</strong> session in the UI (Console → Apigee → your proxy → <em>Debug</em>), send a request, and watch each policy light up in the order above.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Explain the <strong>policy file + <code>&lt;Step&gt;</code> attachment</strong> split.</li>
+<li>Use <strong>AssignMessage</strong> to build a response and set headers.</li>
+<li><strong>Predict execution order</strong> from flow position, not file order.</li>
+<li>Apply the <strong>policy naming convention</strong> used for the rest of the course.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Where do you attach a policy so it runs for <strong>every</strong> operation's response?</li>
+<li>What does <code>&lt;AssignTo type="response"&gt;</code> plus no RouteRule target let you build?</li>
+<li>Two policies are in the same <code>&lt;Request&gt;</code> slot — what determines which runs first?</li>
+</ol>
+<p><strong>Next:</strong> Day 06 — Week 2 opens with <strong>traffic management</strong>: Quota, Spike Arrest, and Concurrent Rate Limit, and exactly when to reach for each.</p><div class="pager">
+<a class="prev" href="day-04.html">&larr; Day 04</a>
+<a class="next" href="day-06.html">Day 06 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 24 — Dynamic Client Registration, SSA & cert-bound tokens · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li class="active"><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Open Banking &middot; Week 4 &middot; ~70 min</div><h1 id="day-24-dynamic-client-registration-ssa-cert-bound-tokens">Day 24 — Dynamic Client Registration, SSA &amp; cert-bound tokens</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll auto-onboard TPPs with <strong>Dynamic Client Registration (DCR)</strong> — verify a Directory-signed <strong>SSA</strong>, create an Apigee developer app from it, fetch the TPP's <strong>JWKS</strong>, and finish wiring <strong>certificate-bound tokens</strong>.</p>
+<p><strong>Builds on Days 16, 19, 20:</strong> SSA verification uses VerifyJWT; app creation uses the Day-13 model; cert-binding completes the Day-19 token work.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>A bank may onboard hundreds of TPPs. Manual app creation doesn't scale and isn't compliant. <strong>DCR</strong> lets a TPP register itself by presenting a Directory-issued Software Statement — your proxy validates it and provisions the OAuth client automatically. This is the onboarding backbone of the whole ecosystem.</p>
+<h2 id="the-dcr-flow-post-register">The DCR flow (<code>POST /register</code>)</h2>
+<div class="codehilite"><pre><span></span><code>TPP → POST /register   (mTLS with OBWAC; body = a signed registration request JWT
+                        that embeds the Directory-issued SSA)
+ASPSP:
+  1. Verify the registration JWT signature (TPP OBSEAL key from the SSA&#39;s JWKS)
+  2. Verify the SSA signature against the OB Directory&#39;s JWKS  ← trust anchor
+  3. Extract software_id, redirect_uris, roles, jwks_uri, org_id from the SSA
+  4. Create an Apigee developer + app; assign products matching the TPP&#39;s roles
+  5. Return the client_id (+ registration response)
+</code></pre></div>
+
+<h2 id="1-verify-the-registration-request-and-the-ssa">1 — Verify the registration request and the SSA</h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Register&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/register&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>DecodeJWT-Registration<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">       </span><span class="cm">&lt;!-- read the embedded software_statement --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-VerifySSA<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                </span><span class="cm">&lt;!-- against OB Directory JWKS (trust anchor) --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>EV-SSAClaims<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">                 </span><span class="cm">&lt;!-- software_id, redirect_uris, roles, jwks_uri --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JWT-VerifyRegRequest<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">         </span><span class="cm">&lt;!-- registration JWT signed by TPP OBSEAL --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-ValidateRedirectUris<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">      </span><span class="cm">&lt;!-- reg redirect_uris ⊆ SSA redirect_uris --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>SC-CreateDeveloperApp<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span><span class="w">        </span><span class="cm">&lt;!-- provision in Apigee via mgmt API --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-RegistrationResponse<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Request&gt;</span>
+<span class="nt">&lt;/Flow&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- verify the SSA against the Directory&#39;s published keys --&gt;</span>
+<span class="nt">&lt;VerifyJWT</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;JWT-VerifySSA&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Algorithm&gt;</span>PS256<span class="nt">&lt;/Algorithm&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>ssa.jwt<span class="nt">&lt;/Source&gt;</span>
+<span class="w">  </span><span class="nt">&lt;PublicKey&gt;</span>
+<span class="w">    </span><span class="nt">&lt;JWKS</span><span class="w"> </span><span class="na">uri=</span><span class="s">&quot;https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/PublicKey&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Issuer&gt;</span>OpenBanking<span class="w"> </span>Ltd<span class="nt">&lt;/Issuer&gt;</span>
+<span class="nt">&lt;/VerifyJWT&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>The Directory's JWKS is the <strong>trust anchor</strong>. If the SSA's signature verifies against it, you <em>know</em> the Directory issued it — that's what lets you trust the embedded claims without a manual check.</p>
+</blockquote>
+<h2 id="2-provision-the-apigee-app-from-ssa-claims">2 — Provision the Apigee app from SSA claims</h2>
+<p>Use a ServiceCallout to the Apigee management API (or apigeecli in a batch job) to create the developer + app, mapping SSA <code>roles</code> → API products:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-CreateAppRequest&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;true&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;request&quot;</span><span class="nt">&gt;</span>createAppReq<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Verb&gt;</span>POST<span class="nt">&lt;/Verb&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Path&gt;</span>/v1/organizations/{org}/developers/{ssa.org_id}@tpp.example/apps<span class="nt">&lt;/Path&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Headers&gt;&lt;Header</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Authorization&quot;</span><span class="nt">&gt;</span>Bearer<span class="w"> </span>{mgmt.token}<span class="nt">&lt;/Header&gt;&lt;/Headers&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>
+{
+<span class="w">  </span>&quot;name&quot;:<span class="w"> </span>&quot;{ssa.software_id}&quot;,
+<span class="w">  </span>&quot;apiProducts&quot;:<span class="w"> </span>[&quot;aisp-read&quot;,&quot;pisp-write&quot;],
+<span class="w">  </span>&quot;attributes&quot;:<span class="w"> </span>[
+<span class="w">    </span>{&quot;name&quot;:&quot;software_id&quot;,&quot;value&quot;:&quot;{ssa.software_id}&quot;},
+<span class="w">    </span>{&quot;name&quot;:&quot;jwks_uri&quot;,&quot;value&quot;:&quot;{ssa.jwks_uri}&quot;},
+<span class="w">    </span>{&quot;name&quot;:&quot;redirect_uris&quot;,&quot;value&quot;:&quot;{ssa.redirect_uris}&quot;},
+<span class="w">    </span>{&quot;name&quot;:&quot;org_id&quot;,&quot;value&quot;:&quot;{ssa.org_id}&quot;}
+<span class="w">  </span>]
+}
+<span class="w">    </span><span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<p>The returned <code>consumerKey</code> becomes the TPP's <code>client_id</code>, returned in the registration response.</p>
+<h2 id="3-resolve-the-tpps-jwks-at-runtime">3 — Resolve the TPP's JWKS at runtime</h2>
+<p>You stored <code>jwks_uri</code> as an app attribute. On token/PAR flows you fetch it (cached) to verify the TPP's signatures — this is the <code>tpp.jwks</code> your Day-15/18/19 VerifyJWT policies referenced:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;ServiceCallout</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;SC-FetchTppJwks&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request</span><span class="w"> </span><span class="na">variable=</span><span class="s">&quot;jwksReq&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Response&gt;</span>jwksResp<span class="nt">&lt;/Response&gt;</span>
+<span class="w">  </span><span class="nt">&lt;HTTPTargetConnection&gt;&lt;URL&gt;</span>{app.jwks_uri}<span class="nt">&lt;/URL&gt;&lt;/HTTPTargetConnection&gt;</span>
+<span class="nt">&lt;/ServiceCallout&gt;</span>
+<span class="cm">&lt;!-- cache aggressively: JWKS rarely change --&gt;</span>
+</code></pre></div>
+
+<p>Wrap it in LookupCache/PopulateCache (Day 10) keyed by <code>client_id</code> so you fetch each TPP's keys at most once per TTL.</p>
+<h2 id="4-finish-certificate-bound-tokens">4 — Finish certificate-bound tokens</h2>
+<p>You stamped <code>cnf.x5t#S256</code> at issue (Day 19). DCR adds the missing half: bind the registration to the <strong>OBWAC</strong> presented at <code>/register</code>, and ensure the cert used at the token endpoint belongs to the same registered TPP. Store the OBWAC subject/thumbprint as an app attribute and assert it:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Name&gt;</span>RF-CertNotRegistered<span class="nt">&lt;/Name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>tls.client.certificate.fingerprint<span class="w"> </span>!=<span class="w"> </span>app.registered_cert_thumbprint<span class="nt">&lt;/Condition&gt;</span>
+<span class="nt">&lt;/Step&gt;</span>
+</code></pre></div>
+
+<p>Now the chain is complete: <strong>registered cert → issues cert-bound token → token only usable from that cert.</strong></p>
+<h2 id="lab-onboard-a-tpp-end-to-end">Lab — onboard a TPP end to end</h2>
+<ol>
+<li>Build the <code>dcr</code> proxy <code>/register</code> flow with SSA verification (use the OB <strong>sandbox</strong> Directory JWKS).</li>
+<li>Obtain a sandbox SSA (or a self-signed test SSA signed by a key you treat as the Directory), POST a registration JWT, and confirm an Apigee app is created:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/open-banking/v3.1/register&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cert<span class="w"> </span>tpp-obwac.crt<span class="w"> </span>--key<span class="w"> </span>tpp-obwac.key<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/jwt&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--data<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$REGISTRATION_JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<span class="c1"># → { &quot;client_id&quot;:&quot;...&quot;, &quot;software_id&quot;:&quot;...&quot;, &quot;redirect_uris&quot;:[...], ... }</span>
+
+<span class="c1"># confirm the app exists in Apigee</span>
+apigeecli<span class="w"> </span>apps<span class="w"> </span>get<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOFTWARE_ID</span><span class="s2">&quot;</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.credentials[0].consumerKey&#39;</span>
+</code></pre></div>
+
+<ol start="3">
+<li>Use the new <code>client_id</code> to run the Day-19 FAPI token flow and confirm the issued token is cert-bound to the OBWAC you registered with.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Implement <strong>DCR</strong>: verify a Directory-signed <strong>SSA</strong> and provision an Apigee app from it.</li>
+<li>Resolve and cache a TPP's <strong>JWKS</strong> for signature verification.</li>
+<li>Complete <strong>certificate-bound tokens</strong>: registered cert → bound token → cert-checked resource calls.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>What is the <strong>trust anchor</strong> that lets you accept an SSA's embedded claims?</li>
+<li>How do SSA <code>roles</code> map onto Apigee objects?</li>
+<li>Which two certificates does a single onboarded TPP use, and for what?</li>
+</ol>
+<p><strong>Next:</strong> Day 25 — Week 4 capstone: assemble <strong>consent + AISP + PISP + DCR</strong> into one coherent Open Banking surface.</p><div class="pager">
+<a class="prev" href="day-23.html">&larr; Day 23</a>
+<a class="next" href="day-25.html">Day 25 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 02 — Provision Apigee X & your toolchain · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li class="active"><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Foundations &middot; Week 1 &middot; ~60 min</div><h1 id="day-2-provision-apigee-x-your-toolchain">Day 2 — Provision Apigee X &amp; your toolchain</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> Today you stand up a real, free <strong>Apigee X evaluation org</strong> in your own GCP project and install every CLI you'll use for the next 28 days. From tomorrow on, every lab deploys to <em>your</em> org.</p>
+<p><strong>Builds on Day 1:</strong> you'll create the exact objects you mapped yesterday — an organization, an environment, an environment group, and a runtime instance.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>You cannot learn proxy development by reading. The eval org gives you a 60-day, no-cost runtime to deploy against. Getting the toolchain right once saves you from environment friction every single day after.</p>
+<h2 id="step-0-prerequisites">Step 0 — Prerequisites</h2>
+<ul>
+<li>A Google Cloud account with <strong>billing enabled</strong> (eval runtime is free, but the project must have a billing account attached).</li>
+<li>Owner/Editor on a project you can use, or permission to create one.</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Authenticate and pick (or create) a project</span>
+gcloud<span class="w"> </span>auth<span class="w"> </span>login
+<span class="nb">export</span><span class="w"> </span><span class="nv">PROJECT_ID</span><span class="o">=</span><span class="s2">&quot;my-apigee-training&quot;</span><span class="w">      </span><span class="c1"># change me</span>
+gcloud<span class="w"> </span>projects<span class="w"> </span>create<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PROJECT_ID</span><span class="s2">&quot;</span><span class="w"> </span>--set-as-default<span class="w">   </span><span class="c1"># skip if it exists</span>
+gcloud<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>project<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PROJECT_ID</span><span class="s2">&quot;</span>
+
+<span class="c1"># Make sure billing is linked (replace with your billing account id)</span>
+gcloud<span class="w"> </span>billing<span class="w"> </span>accounts<span class="w"> </span>list
+gcloud<span class="w"> </span>billing<span class="w"> </span>projects<span class="w"> </span>link<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PROJECT_ID</span><span class="s2">&quot;</span><span class="w"> </span>--billing-account<span class="o">=</span>XXXXXX-XXXXXX-XXXXXX
+</code></pre></div>
+
+<h2 id="step-1-enable-the-apis">Step 1 — Enable the APIs</h2>
+<div class="codehilite"><pre><span></span><code>gcloud<span class="w"> </span>services<span class="w"> </span><span class="nb">enable</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>apigee.googleapis.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>compute.googleapis.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>servicenetworking.googleapis.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>cloudkms.googleapis.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--project<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PROJECT_ID</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="step-2-provision-the-eval-organization">Step 2 — Provision the eval organization</h2>
+<p>The fastest path is the <strong>Apigee provisioning wizard</strong> in the Cloud Console, which sets up networking for you.</p>
+<blockquote>
+<p><strong>Console route (recommended for Day 2):</strong> Console → <strong>Apigee</strong> → <strong>Set up Apigee</strong> → choose <strong>Evaluation</strong> → pick a region (UK Open Banking → <strong>europe-west2</strong>, London) → let it create the org + environment + environment group + instance. Takes ~25–45 minutes to become ready.</p>
+</blockquote>
+<p>If you prefer the CLI, the eval org is a multi-step gcloud sequence (org → instance → environment → env group → attachment). The console wizard does all of it; come back to the CLI version on Day 26 when we automate environments. For reference, the org-create call looks like:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># CLI equivalent of the wizard&#39;s first step (the wizard also does the rest)</span>
+gcloud<span class="w"> </span>alpha<span class="w"> </span>apigee<span class="w"> </span>organizations<span class="w"> </span>provision<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--runtime-location<span class="o">=</span>europe-west2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--analytics-region<span class="o">=</span>europe-west2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--project<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PROJECT_ID</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Open Banking note:</strong> choose <strong>europe-west2 (London)</strong> for UK data residency and low latency to UK rails. You can run multi-region later (Day 30); a single region is right for learning.</p>
+</blockquote>
+<h2 id="step-3-confirm-the-org-is-alive">Step 3 — Confirm the org is alive</h2>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">ORG</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PROJECT_ID</span><span class="s2">&quot;</span><span class="w">          </span><span class="c1"># eval org name == project id</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">ENV</span><span class="o">=</span><span class="s2">&quot;eval&quot;</span><span class="w">                 </span><span class="c1"># the wizard&#39;s default environment is usually &#39;eval&#39;</span>
+
+<span class="c1"># List environments in your org</span>
+gcloud<span class="w"> </span>apigee<span class="w"> </span>environments<span class="w"> </span>list<span class="w"> </span>--organization<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span>
+
+<span class="c1"># Show the environment groups and their hostnames</span>
+gcloud<span class="w"> </span>apigee<span class="w"> </span>envgroups<span class="w"> </span>list<span class="w"> </span>--organization<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>You should see at least one environment and one environment group with a <code>*.nip.io</code>-style eval hostname (or a hostname you chose).</p>
+<h2 id="step-4-install-the-toolchain">Step 4 — Install the toolchain</h2>
+<p><code>apigeecli</code> is the community-standard CLI for managing proxies, products, KVMs, and deployments. You'll use it daily.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># apigeecli (installs to ~/.apigeecli/bin)</span>
+curl<span class="w"> </span>-L<span class="w"> </span>https://raw.githubusercontent.com/apigee/apigeecli/main/downloadLatest.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh<span class="w"> </span>-
+<span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PATH</span><span class="s2">:</span><span class="nv">$HOME</span><span class="s2">/.apigeecli/bin&quot;</span>
+apigeecli<span class="w"> </span>-v
+
+<span class="c1"># A throwaway access token you can reuse in commands today</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>gcloud<span class="w"> </span>auth<span class="w"> </span>print-access-token<span class="k">)</span>
+</code></pre></div>
+
+<p>Confirm <code>apigeecli</code> can see your org:</p>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>organizations<span class="w"> </span>get<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>Also confirm you have the other tools the course uses:</p>
+<div class="codehilite"><pre><span></span><code>gcloud<span class="w"> </span>--version<span class="w">      </span><span class="c1"># Google Cloud CLI</span>
+curl<span class="w"> </span>--version<span class="w">        </span><span class="c1"># HTTP client for testing</span>
+jq<span class="w"> </span>--version<span class="w">          </span><span class="c1"># JSON pretty-printing (brew install jq if missing)</span>
+openssl<span class="w"> </span>version<span class="w">       </span><span class="c1"># for keys/certs in the security weeks</span>
+</code></pre></div>
+
+<h2 id="step-5-save-your-environment-variables">Step 5 — Save your environment variables</h2>
+<p>You'll reuse these constantly. Drop them in a file you can <code>source</code>:</p>
+<div class="codehilite"><pre><span></span><code>cat<span class="w"> </span>&gt;<span class="w"> </span>~/.apigee-training.env<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
+<span class="s">export PROJECT_ID=&quot;my-apigee-training&quot;</span>
+<span class="s">export ORG=&quot;$PROJECT_ID&quot;</span>
+<span class="s">export ENV=&quot;eval&quot;</span>
+<span class="s">export RUNTIME_HOST=&quot;&lt;your-env-group-hostname&gt;&quot;   # from: gcloud apigee envgroups</span>
+<span class="s">export TOKEN=$(gcloud auth print-access-token)</span>
+<span class="s">EOF</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;source ~/.apigee-training.env&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.zshrc
+<span class="nb">source</span><span class="w"> </span>~/.apigee-training.env
+</code></pre></div>
+
+<blockquote>
+<p><strong>⚠ Warning:</strong> <code>gcloud auth print-access-token</code> produces a <strong>short-lived</strong> token (≈1 hour). Re-run <code>export TOKEN=$(gcloud auth print-access-token)</code> whenever a command returns <code>401</code>.</p>
+</blockquote>
+<h2 id="lab-prove-the-loop-works">Lab — prove the loop works</h2>
+<p>Deploy the sample "hello world" proxy that ships with Apigee, just to confirm the full create→deploy→call loop before you build your own tomorrow:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Apigee ships a sample; if your org doesn&#39;t have it, this is fine —</span>
+<span class="c1"># tomorrow you build one from scratch. For now just confirm listing works:</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>list<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>envs<span class="w"> </span>list<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>If both commands return JSON without error, your control-plane access is good.</p>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Provision a <strong>free eval Apigee X org</strong> in the right region for UK Open Banking.</li>
+<li>Confirm your <strong>environment</strong> and <strong>environment group hostname</strong>.</li>
+<li>Run <code>apigeecli</code> and <code>gcloud</code> against your org with a bearer token.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why did we pick <code>europe-west2</code>?</li>
+<li>What's the difference between the <strong>org name</strong> and the <strong>environment name</strong> in an eval setup?</li>
+<li>Your <code>apigeecli</code> call returns <code>401</code>. What's the first thing to refresh?</li>
+</ol>
+<p><strong>Next:</strong> Day 03 — build and deploy your <em>first</em> API proxy from an empty bundle, and read every file inside it.</p><div class="pager">
+<a class="prev" href="day-01.html">&larr; Day 01</a>
+<a class="next" href="day-03.html">Day 03 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

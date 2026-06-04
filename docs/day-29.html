@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 29 — API products, portal, monetization & API hub · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li class="active"><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Operations &middot; Week 5 &middot; ~60 min</div><h1 id="day-29-api-products-portal-monetization-api-hub">Day 29 — API products, portal, monetization &amp; API hub</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll package your proxies into <strong>API products</strong>, publish them on a <strong>developer portal</strong> with OpenAPI specs, optionally attach <strong>monetization</strong> rate plans, and catalog/govern everything in <strong>API hub</strong>.</p>
+<p><strong>Builds on Day 13:</strong> API products return — now as the unit of <em>publishing and consumption</em>, not just access control.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>An API nobody can discover, understand, or self-serve onto is a cost, not an asset. The product/portal layer is how TPPs find your Open Banking APIs, read the spec, get credentials, and (in premium-API cases) pay. It's also where governance and the API catalog live.</p>
+<h2 id="api-products-as-the-consumption-unit">API products as the consumption unit</h2>
+<p>You built products for access (Day 13). The same product is what a developer <strong>sees and subscribes to</strong> on the portal. Design them around <em>consumer journeys</em>, not internal proxies:</p>
+<div class="codehilite"><pre><span></span><code>Product &quot;Open Banking AISP (Read)&quot;   → ob-aisp ops, scope=accounts, free, public
+Product &quot;Open Banking PISP (Write)&quot;  → ob-pisp ops, scope=payments, onboarding-gated
+Product &quot;Premium Insights&quot;           → enrichment proxy, paid rate plan, private
+</code></pre></div>
+
+<blockquote>
+<p>A product can span <strong>multiple proxies</strong> and expose only <strong>specific operations</strong>. Bundle by what a TPP needs to do, e.g. an "AISP" product grouping accounts+balances+transactions across proxies.</p>
+</blockquote>
+<h2 id="attach-an-openapi-spec">Attach an OpenAPI spec</h2>
+<p>Portals render from an <strong>OpenAPI</strong> document. Keep the spec in Git (Day 27) and associate it with the product so the portal shows accurate, try-it-out docs.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># specs/ob-aisp.yaml (excerpt)</span>
+<span class="nt">openapi</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3.0.3</span>
+<span class="nt">info</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> title</span><span class="p">:</span><span class="w"> </span><span class="nv">Open Banking AISP</span><span class="p p-Indicator">,</span><span class="nt"> version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.1.0&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="nt">servers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt"> url</span><span class="p">:</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.demobank.example/open-banking/v3.1/aisp</span><span class="w"> </span><span class="p p-Indicator">}]</span>
+<span class="nt">paths</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">/accounts</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">get</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Get consented accounts</span>
+<span class="w">      </span><span class="nt">security</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt"> openbanking</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">accounts</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}]</span>
+<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">x-fapi-interaction-id</span><span class="p p-Indicator">,</span><span class="nt"> in</span><span class="p">:</span><span class="w"> </span><span class="nv">header</span><span class="p p-Indicator">,</span><span class="nt"> required</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="nt"> schema</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">      </span><span class="nt">responses</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="s">&quot;200&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> description</span><span class="p">:</span><span class="w"> </span><span class="nv">OK</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="w"> </span><span class="s">&quot;403&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> description</span><span class="p">:</span><span class="w"> </span><span class="nv">Consent not Authorised</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="nt">components</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">securitySchemes</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">openbanking</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">oauth2</span><span class="p p-Indicator">,</span><span class="nt"> flows</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> authorizationCode</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> authorizationUrl</span><span class="p">:</span><span class="w"> </span><span class="nv">/authorize</span><span class="p p-Indicator">,</span><span class="nt"> tokenUrl</span><span class="p">:</span><span class="w"> </span><span class="nv">/token</span><span class="p p-Indicator">,</span><span class="nt"> scopes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> accounts</span><span class="p">:</span><span class="w"> </span><span class="nv">read</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apidocs<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Open Banking AISP&quot;</span><span class="w"> </span>--apiproductname<span class="w"> </span><span class="s2">&quot;ob-aisp-read&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--oas-doc<span class="w"> </span>./specs/ob-aisp.yaml<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="developer-portal">Developer portal</h2>
+<p>Apigee X offers <strong>integrated portals</strong> (managed, no infra). Publish products, the spec, and let developers self-register apps and get keys.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># create a portal and publish the AISP product to it</span>
+apigeecli<span class="w"> </span>sites<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>ob-portal<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+<span class="c1"># (publish products, upload spec, configure auth in the portal admin)</span>
+</code></pre></div>
+
+<blockquote>
+<p>For Open Banking, the <em>production</em> client onboarding is <strong>DCR</strong> (Day 24), not portal self-service — but the portal is still where TPPs read docs, try the <strong>sandbox</strong>, and manage non-production apps. Use portal for <strong>discovery + sandbox</strong>, DCR for <strong>regulated production onboarding</strong>.</p>
+</blockquote>
+<h2 id="monetization-optional-for-premium-apis">Monetization (optional, for premium APIs)</h2>
+<p>Core OB APIs are mandated and free, but banks monetize <strong>premium/enrichment</strong> APIs (categorized transactions, insights, confirmation-of-payee at scale). Apigee monetization attaches <strong>rate plans</strong> to products:</p>
+<div class="codehilite"><pre><span></span><code>Rate plan types:
+  - Flat fee (subscription)         e.g. £500/month for Premium Insights
+  - Per-use (per API call)          e.g. £0.002 / enrichment call
+  - Revenue-share / freemium tiers  e.g. 10k free calls, then per-use
+</code></pre></div>
+
+<p>Rate plans meter against the same <strong>product + app</strong> model, using the quota counters you already wired. Billing data flows from analytics.</p>
+<h2 id="api-hub-catalog-governance">API hub — catalog &amp; governance</h2>
+<p><strong>API hub</strong> is the org-wide catalog: every API (Apigee or not), its versions, specs, owners, lifecycle status, and deployments — with governance rules (style guides, linting) applied across teams.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># register an API and version in API hub</span>
+apigeecli<span class="w"> </span>apihub<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>--id<span class="w"> </span>ob-aisp<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;Open Banking AISP&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--region<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$REGION</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p>Use API hub to enforce <strong>standards at scale</strong>: a style guide (e.g. "all OB APIs must require <code>x-fapi-interaction-id</code>", "version in base path", "use OBIE error schema") linted automatically, plus a single place to answer "what APIs do we have and who owns them?"</p>
+</blockquote>
+<h2 id="lab-publish-the-aisp-product">Lab — publish the AISP product</h2>
+<ol>
+<li>Create/refine the <code>ob-aisp-read</code> product scoped to the read operations with <code>scope=accounts</code>.</li>
+<li>Author <code>specs/ob-aisp.yaml</code>, attach it as API docs.</li>
+<li>Create an integrated portal, publish the product + spec, and walk the <strong>self-service</strong> flow as a developer: register an app, get a key, try <code>/accounts</code> in the sandbox.</li>
+<li>(Optional) Attach a flat-fee rate plan to a <code>premium-insights</code> product and confirm a subscribing app is metered.</li>
+<li>Register <code>ob-aisp</code> in <strong>API hub</strong> and add a style-guide rule requiring the FAPI header.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Design <strong>API products</strong> around consumer journeys and attach <strong>OpenAPI</strong> specs.</li>
+<li>Publish to an <strong>integrated developer portal</strong> for discovery + sandbox (DCR for prod).</li>
+<li>Attach <strong>monetization</strong> rate plans to premium products and catalog everything in <strong>API hub</strong>.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why is DCR — not portal self-service — the production onboarding path for OB TPPs?</li>
+<li>Can one API product span multiple proxies? Why would you want that?</li>
+<li>What does API hub give you that per-proxy config doesn't?</li>
+</ol>
+<p><strong>Next:</strong> Day 30 — the finish line: a <strong>production-readiness review</strong> and the full <strong>Open Banking capstone</strong> sign-off.</p><div class="pager">
+<a class="prev" href="day-28.html">&larr; Day 28</a>
+<a class="next" href="day-30.html">Day 30 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

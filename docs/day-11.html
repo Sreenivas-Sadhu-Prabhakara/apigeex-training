@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 11 — Fault handling & error taxonomy · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li class="active"><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Mediation &middot; Week 2 &middot; ~55 min</div><h1 id="day-11-fault-handling-error-taxonomy">Day 11 — Fault handling &amp; error taxonomy</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll throw controlled errors with <strong>RaiseFault</strong>, catch and shape <em>any</em> error with <strong>FaultRules</strong> and a <strong>DefaultFaultRule</strong>, and return a consistent OBIE-style error envelope every time.</p>
+<p><strong>Builds on Day 8 &amp; 9:</strong> you'll reuse <code>JS-BuildOBError</code> and finally give the <code>/health</code> no-route and funds-check failures proper responses.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>In banking, a vague <code>500</code> is a support ticket and a trust problem. TPPs integrate against your <strong>error contract</strong> — the OBIE error format with stable <code>ErrorCode</code>s. Apigee's fault system lets you guarantee that contract no matter where the failure happens: a tripped quota, a backend timeout, a validation failure.</p>
+<h2 id="three-mechanisms-know-the-difference">Three mechanisms — know the difference</h2>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Fires when</th>
+<th>Lives in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RaiseFault</strong></td>
+<td><em>You</em> decide to fail (validation, business rule)</td>
+<td>A <code>&lt;Step&gt;</code> you attach in a flow</td>
+</tr>
+<tr>
+<td><strong>FaultRules</strong></td>
+<td>A policy or RaiseFault throws; the matching rule runs</td>
+<td><code>&lt;FaultRules&gt;</code> on the ProxyEndpoint/TargetEndpoint</td>
+</tr>
+<tr>
+<td><strong>DefaultFaultRule</strong></td>
+<td>Nothing else matched — the catch-all</td>
+<td><code>&lt;DefaultFaultRule&gt;</code> on the endpoint</td>
+</tr>
+</tbody>
+</table>
+<p>When an error occurs, Apigee <strong>stops the normal flow</strong> and enters error-handling: it evaluates FaultRules top-to-bottom (first match wins unless <code>&lt;AlwaysEnforce&gt;</code>), then the DefaultFaultRule.</p>
+<h2 id="raisefault-fail-on-purpose">RaiseFault — fail on purpose</h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;RaiseFault</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;RF-InvalidAmount&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>RF-InvalidAmount<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;FaultResponse&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">      </span><span class="nt">&lt;StatusCode&gt;</span>400<span class="nt">&lt;/StatusCode&gt;</span>
+<span class="w">      </span><span class="nt">&lt;ReasonPhrase&gt;</span>Bad<span class="w"> </span>Request<span class="nt">&lt;/ReasonPhrase&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/FaultResponse&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- seed variables the error builder will read --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;&lt;Name&gt;</span>error.obie.code<span class="nt">&lt;/Name&gt;&lt;Value&gt;</span>UK.OBIE.Field.Invalid<span class="nt">&lt;/Value&gt;&lt;/AssignVariable&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;&lt;Name&gt;</span>error.obie.message<span class="nt">&lt;/Name&gt;&lt;Value&gt;</span>InstructedAmount.Amount<span class="w"> </span>must<span class="w"> </span>be<span class="w"> </span>positive.<span class="nt">&lt;/Value&gt;&lt;/AssignVariable&gt;</span>
+<span class="nt">&lt;/RaiseFault&gt;</span>
+</code></pre></div>
+
+<p>Attach it conditionally — e.g. reject a non-positive payment amount:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Name&gt;</span>RF-InvalidAmount<span class="nt">&lt;/Name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>ob.amount<span class="w"> </span>LesserThanOrEquals<span class="w"> </span>0<span class="nt">&lt;/Condition&gt;</span>
+<span class="nt">&lt;/Step&gt;</span>
+</code></pre></div>
+
+<h2 id="faultrules-catch-and-standardize">FaultRules — catch and standardize</h2>
+<p>Put fault rules on the ProxyEndpoint so they catch errors from anywhere in the request flow. Each rule has a <code>&lt;Condition&gt;</code> over the special <code>fault.name</code>, policy error variables, and <code>error.*</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;ProxyEndpoint</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;default&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- ... HTTPProxyConnection, Flows, RouteRule ... --&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;FaultRules&gt;</span>
+<span class="w">    </span><span class="cm">&lt;!-- 1. Our own raised faults already set error.obie.*; just format --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;FaultRule</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;obie-validation&quot;</span><span class="nt">&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Condition&gt;</span>error.obie.code<span class="w"> </span>!=<span class="w"> </span>null<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>JS-BuildOBError<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/FaultRule&gt;</span>
+
+<span class="w">    </span><span class="cm">&lt;!-- 2. Quota / spike → 429 with a rate-limit error code --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;FaultRule</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;rate-limited&quot;</span><span class="nt">&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Condition&gt;</span>(fault.name<span class="w"> </span>=<span class="w"> </span>&quot;QuotaViolation&quot;)<span class="w"> </span>or<span class="w"> </span>(fault.name<span class="w"> </span>=<span class="w"> </span>&quot;SpikeArrestViolation&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-RateLimitError<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/FaultRule&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/FaultRules&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;DefaultFaultRule</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;catch-all&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="cm">&lt;!-- last line of defence: backend timeouts, unexpected policy errors --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Step&gt;&lt;Name&gt;</span>AM-GenericError<span class="nt">&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/DefaultFaultRule&gt;</span>
+<span class="nt">&lt;/ProxyEndpoint&gt;</span>
+</code></pre></div>
+
+<p>Supporting AssignMessages:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-RateLimitError&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;StatusCode&gt;</span>429<span class="nt">&lt;/StatusCode&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>
+{&quot;Code&quot;:&quot;429<span class="w"> </span>TooManyRequests&quot;,&quot;Errors&quot;:[{&quot;ErrorCode&quot;:&quot;UK.OBIE.Rate.Limit&quot;,&quot;Message&quot;:&quot;Rate<span class="w"> </span>limit<span class="w"> </span>exceeded.&quot;}]}
+<span class="w">    </span><span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;response&quot;</span><span class="nt">&gt;</span>response<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-GenericError&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">    </span><span class="nt">&lt;StatusCode&gt;</span>500<span class="nt">&lt;/StatusCode&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>
+{&quot;Code&quot;:&quot;500<span class="w"> </span>InternalServerError&quot;,&quot;Id&quot;:&quot;{messageid}&quot;,&quot;Errors&quot;:[{&quot;ErrorCode&quot;:&quot;UK.OBIE.UnexpectedError&quot;,&quot;Message&quot;:&quot;An<span class="w"> </span>unexpected<span class="w"> </span>error<span class="w"> </span>occurred.&quot;}]}
+<span class="w">    </span><span class="nt">&lt;/Payload&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignTo</span><span class="w"> </span><span class="na">createNew=</span><span class="s">&quot;false&quot;</span><span class="w"> </span><span class="na">type=</span><span class="s">&quot;response&quot;</span><span class="nt">&gt;</span>response<span class="nt">&lt;/AssignTo&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong><code>continueOnError</code>:</strong> by default a failing policy enters fault handling. Set <code>continueOnError="true"</code> on a policy when a failure is non-fatal (e.g. a logging callout) and you want the flow to keep going. Use sparingly.</p>
+</blockquote>
+<h2 id="a-minimal-obie-error-taxonomy">A minimal OBIE error taxonomy</h2>
+<p>Map internal failures to stable, documented error codes:</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>HTTP</th>
+<th>OBIE ErrorCode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Missing/!valid field</td>
+<td>400</td>
+<td><code>UK.OBIE.Field.Invalid</code> / <code>UK.OBIE.Field.Missing</code></td>
+</tr>
+<tr>
+<td>Bad/expired token</td>
+<td>401</td>
+<td>(FAPI/OAuth error)</td>
+</tr>
+<tr>
+<td>Consent not authorised</td>
+<td>403</td>
+<td><code>UK.OBIE.Resource.InvalidConsentStatus</code></td>
+</tr>
+<tr>
+<td>Resource not found</td>
+<td>404</td>
+<td><code>UK.OBIE.Resource.NotFound</code></td>
+</tr>
+<tr>
+<td>Rate limited</td>
+<td>429</td>
+<td><code>UK.OBIE.Rate.Limit</code></td>
+</tr>
+<tr>
+<td>Unexpected</td>
+<td>500</td>
+<td><code>UK.OBIE.UnexpectedError</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="lab-guarantee-the-contract">Lab — guarantee the contract</h2>
+<ol>
+<li>Add <code>RF-InvalidAmount</code>, <code>AM-RateLimitError</code>, <code>AM-GenericError</code> and the FaultRules/DefaultFaultRule block to <code>proxies/default.xml</code>.</li>
+<li>Trigger each path and confirm a consistent envelope:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--proxy-folder<span class="w"> </span>./hello-v1/apiproxy<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--rev<span class="w"> </span><span class="m">7</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># validation fault (negative amount)</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/payments&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;Data&quot;:{&quot;Initiation&quot;:{&quot;InstructedAmount&quot;:{&quot;Amount&quot;:&quot;-5&quot;,&quot;Currency&quot;:&quot;GBP&quot;}}}}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+
+<span class="c1"># rate limit (burst until SpikeArrest trips)</span>
+<span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>seq<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">8</span><span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code} &quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-client-id: t&quot;</span><span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">done</span><span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+</code></pre></div>
+
+<p>Every error now returns an OBIE-shaped JSON body — never a raw stack or empty <code>500</code>.</p>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Throw deliberate errors with <strong>RaiseFault</strong> + conditional steps.</li>
+<li>Catch any error with <strong>FaultRules</strong> and a <strong>DefaultFaultRule</strong>, mapping to a stable taxonomy.</li>
+<li>Return a <strong>consistent OBIE error envelope</strong> for validation, rate-limit, and unexpected failures.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>A backend times out. Which mechanism catches it if no FaultRule matches?</li>
+<li>How do you make a logging policy's failure <em>not</em> break the main flow?</li>
+<li>Two FaultRules match — which runs (default behavior)?</li>
+</ol>
+<p><strong>Next:</strong> Day 12 — Week 2 capstone: pull all this cross-cutting logic into <strong>shared flows</strong> and attach it everywhere with <strong>flow hooks</strong>.</p><div class="pager">
+<a class="prev" href="day-10.html">&larr; Day 10</a>
+<a class="next" href="day-12.html">Day 12 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

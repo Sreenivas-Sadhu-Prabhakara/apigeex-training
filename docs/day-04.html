@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 04 — Flows, conditions & routing · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li class="active"><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Proxy Dev &middot; Week 1 &middot; ~50 min</div><h1 id="day-4-flows-conditions-routing">Day 4 — Flows, conditions &amp; routing</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll make one proxy behave differently per HTTP method and path using <strong>conditional flows</strong>, and route to different backends using <strong>RouteRules with conditions</strong>.</p>
+<p><strong>Builds on Day 3:</strong> we extend the <code>hello-v1</code> bundle's empty <code>&lt;Flows/&gt;</code> and single <code>RouteRule</code>.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Real APIs aren't one path. An Open Banking AISP proxy serves <code>GET /accounts</code>, <code>GET /accounts/{id}/balances</code>, <code>GET /accounts/{id}/transactions</code> — each needs its own logic. Conditional flows are how you attach the right policies to the right operation without writing one giant if-statement.</p>
+<h2 id="the-execution-order-the-pipeline">The execution order (the pipeline)</h2>
+<p>Every request walks this fixed path. Memorize it — Day 5 attaches policies to each slot:</p>
+<div class="codehilite"><pre><span></span><code>REQUEST
+  ProxyEndpoint.PreFlow.Request
+  ProxyEndpoint.&lt;matching conditional Flow&gt;.Request
+  ProxyEndpoint.PostFlow.Request
+  ── RouteRule selects a TargetEndpoint ──
+  TargetEndpoint.PreFlow.Request
+  TargetEndpoint.&lt;matching conditional Flow&gt;.Request
+  TargetEndpoint.PostFlow.Request
+        → backend call →
+RESPONSE
+  TargetEndpoint.PreFlow.Response
+  TargetEndpoint.&lt;matching conditional Flow&gt;.Response
+  TargetEndpoint.PostFlow.Response
+  ProxyEndpoint.PreFlow.Response
+  ProxyEndpoint.&lt;matching conditional Flow&gt;.Response
+  ProxyEndpoint.PostFlow.Response
+</code></pre></div>
+
+<p>Two rules that surprise newcomers:</p>
+<ul>
+<li><strong>PreFlow always runs; conditional flows run only if their condition matches; the <em>first</em> matching conditional flow wins</strong> (the rest are skipped).</li>
+<li>On the response side the order is <strong>reversed</strong> for the conditional flow selection — but PreFlow still runs before PostFlow.</li>
+</ul>
+<h2 id="conditional-flows">Conditional flows</h2>
+<p>A <code>&lt;Flow&gt;</code> has a <code>&lt;Condition&gt;</code>. Conditions are boolean expressions over <strong>flow variables</strong>. The two you'll use constantly:</p>
+<ul>
+<li><code>request.verb</code> — the HTTP method (<code>"GET"</code>, <code>"POST"</code>, …)</li>
+<li><code>proxy.pathsuffix</code> — the path <em>after</em> the BasePath (e.g. for <code>/hello-v1/accounts/123</code>, it's <code>/accounts/123</code>)</li>
+</ul>
+<p>The <code>MatchesPath</code> operator (<code>~/</code> or <code>MatchesPath</code>) supports <code>{}</code> wildcards.</p>
+<p>Replace the <code>&lt;Flows/&gt;</code> in <code>proxies/default.xml</code> with named flows:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;Flows&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;GetGreeting&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;GET&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">    </span><span class="cm">&lt;!-- request/response policies for this op go here (Day 5) --&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Request/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Response/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Flow&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;GetAccountById&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>MatchesPath<span class="w"> </span>&quot;/accounts/{id}&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;GET&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Request/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Response/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Flow&gt;</span>
+
+<span class="w">  </span><span class="nt">&lt;Flow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CreatePayment&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Condition&gt;</span>(proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/payments&quot;)<span class="w"> </span>and<span class="w"> </span>(request.verb<span class="w"> </span>=<span class="w"> </span>&quot;POST&quot;)<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Request/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Response/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/Flow&gt;</span>
+<span class="nt">&lt;/Flows&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Always end with a catch-all.</strong> If nothing matches and you want a clean 404 instead of silently proxying, add a final flow with <code>&lt;Condition&gt;true&lt;/Condition&gt;</code> that raises a fault (you'll wire RaiseFault on Day 11).</p>
+</blockquote>
+<h2 id="routerules-routing-to-different-targets">RouteRules: routing to different targets</h2>
+<p>A <code>ProxyEndpoint</code> can have <strong>multiple</strong> <code>RouteRule</code>s, evaluated <strong>top to bottom; first match wins</strong>. Use conditions to pick a backend — or to return a response from policies with <strong>no</strong> backend at all.</p>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- Send health checks nowhere (answered by a policy), everything else to the backend --&gt;</span>
+<span class="nt">&lt;RouteRule</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;noRoute&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>proxy.pathsuffix<span class="w"> </span>=<span class="w"> </span>&quot;/health&quot;<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- no &lt;TargetEndpoint&gt; =&gt; no backend call; a policy must build the response --&gt;</span>
+<span class="nt">&lt;/RouteRule&gt;</span>
+
+<span class="nt">&lt;RouteRule</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;sandbox&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Condition&gt;</span>request.header.X-Env<span class="w"> </span>=<span class="w"> </span>&quot;sandbox&quot;<span class="nt">&lt;/Condition&gt;</span>
+<span class="w">  </span><span class="nt">&lt;TargetEndpoint&gt;</span>sandbox<span class="nt">&lt;/TargetEndpoint&gt;</span>
+<span class="nt">&lt;/RouteRule&gt;</span>
+
+<span class="nt">&lt;RouteRule</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;default&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;TargetEndpoint&gt;</span>default<span class="nt">&lt;/TargetEndpoint&gt;</span>
+<span class="nt">&lt;/RouteRule&gt;</span>
+</code></pre></div>
+
+<blockquote>
+<p>RouteRules are ordered: put the most specific conditions first and an <strong>unconditional <code>default</code> last</strong> so there's always a fallback.</p>
+</blockquote>
+<h2 id="lab-add-a-versioned-method-aware-route">Lab — add a versioned, method-aware route</h2>
+<ol>
+<li>Edit <code>hello-v1/apiproxy/proxies/default.xml</code>: add the three conditional flows above and the <code>/health</code> no-route RouteRule.</li>
+<li>Add a second TargetEndpoint file <code>targets/sandbox.xml</code> (copy <code>default.xml</code>, change <code>URL</code> to <code>https://mocktarget.apigee.com</code> too for now — different backend comes on Day 9) and the <code>sandbox</code> RouteRule.</li>
+<li>Re-create + redeploy:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--proxy-folder<span class="w"> </span>./hello-v1/apiproxy<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>hello-v1<span class="w"> </span>--rev<span class="w"> </span><span class="m">2</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<ol start="4">
+<li>Test routing and method matching:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/&quot;</span><span class="w">            </span><span class="c1"># GET / → matches GetGreeting</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/payments&quot;</span><span class="w">  </span><span class="c1"># POST → CreatePayment</span>
+curl<span class="w"> </span>-is<span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/health&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w">   </span><span class="c1"># no-route: will error until Day 11 gives it a response</span>
+curl<span class="w"> </span>-is<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;X-Env: sandbox&quot;</span><span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/hello-v1/&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w">   </span><span class="c1"># routed via sandbox RouteRule</span>
+</code></pre></div>
+
+<p>The <code>/health</code> call will currently fail because no policy builds its response — that's expected and intentional; it proves the no-route path is taken. Day 5's AssignMessage will give it a body.</p>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Recite the <strong>request/response pipeline</strong> order.</li>
+<li>Attach logic per operation with <strong>conditional flows</strong> and <code>proxy.pathsuffix</code> / <code>request.verb</code>.</li>
+<li>Branch backends (or skip the backend) with <strong>conditional RouteRules</strong>, first-match-wins.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Two conditional flows both match a request. Which runs?</li>
+<li>What happens to a request whose RouteRule has no <code>&lt;TargetEndpoint&gt;</code> and no policy to build a response?</li>
+<li>Where would you enforce "every request must carry an <code>x-fapi-interaction-id</code> header" so it applies to <em>all</em> operations — a conditional flow, or PreFlow?</li>
+</ol>
+<p><strong>Next:</strong> Day 05 — finally attach <strong>policies</strong> into these flow slots and predict their exact execution point.</p><div class="pager">
+<a class="prev" href="day-03.html">&larr; Day 03</a>
+<a class="next" href="day-05.html">Day 05 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

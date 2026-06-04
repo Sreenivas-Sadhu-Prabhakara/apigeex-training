@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 30 — Production readiness & Open Banking capstone · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li class="active"><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Operations &middot; Week 5 &middot; ~90 min</div><h1 id="day-30-production-readiness-open-banking-capstone">Day 30 — Production readiness &amp; Open Banking capstone</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll run a go-live review over your Open Banking build — performance, resilience, multi-region, security hardening, and runbooks — and graduate with a production-readiness checklist you can defend to an auditor.</p>
+<p><strong>Builds on everything:</strong> Day 30 doesn't add features; it makes what you built <em>operable, resilient, and compliant</em>.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>The gap between "it works in the demo" and "it survives Black Friday, a region outage, and an audit" is production readiness. In banking that gap is the whole job. Today turns your 29 days of building into something you can actually run.</p>
+<h2 id="performance-scaling">Performance &amp; scaling</h2>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>What to do on Apigee X</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Latency budget</strong></td>
+<td>Trace (Day 28) each hop; keep proxy overhead low — prefer declarative policies over JS; cache reference data and JWKS (Day 10)</td>
+</tr>
+<tr>
+<td><strong>Backend protection</strong></td>
+<td>SpikeArrest + Quota + ConcurrentRateLimit tuned to <em>real</em> backend limits (Day 6)</td>
+</tr>
+<tr>
+<td><strong>Heavy policies</strong></td>
+<td>Minimize per-request crypto; cache verified JWKS; avoid large JS payloads; stream don't buffer where possible</td>
+</tr>
+<tr>
+<td><strong>Connection reuse</strong></td>
+<td>Keep-alive to backends via TargetServer settings; right-size timeouts (<code>io.timeout.millis</code>)</td>
+</tr>
+<tr>
+<td><strong>Load test</strong></td>
+<td>Drive expected peak + headroom through <code>test</code>; watch p95/p99 and error rate, not just averages</td>
+</tr>
+</tbody>
+</table>
+<h2 id="resilience-multi-region">Resilience &amp; multi-region</h2>
+<div class="codehilite"><pre><span></span><code>Single region (eval)              Production (HA)
+  europe-west2                      europe-west2  + europe-west1
+  one instance                      instance per region, both attached to prod env
+                                    global load balancer fails over on region loss
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># add a second region for HA (production pattern)</span>
+apigeecli<span class="w"> </span>instances<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>inst-ew1<span class="w"> </span>--location<span class="w"> </span>europe-west1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--diskenckeyname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$KMS_KEY</span><span class="s2">&quot;</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>instances<span class="w"> </span>attachments<span class="w"> </span>attach<span class="w"> </span>--name<span class="w"> </span>inst-ew1<span class="w"> </span>--env<span class="w"> </span>prod<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>Resilience patterns to verify:</p>
+<ul>
+<li><strong>Backend failover</strong> — TargetServer LoadBalancer with multiple servers + health monitors.</li>
+<li><strong>Graceful degradation</strong> — if the consent store is down, fail <em>closed</em> (deny) for data, never fail open.</li>
+<li><strong>Idempotency</strong> (Day 23) holds under retries and partial failures.</li>
+<li><strong>Circuit-breaking</strong> — short timeouts + a fast OBIE error beat a hung request.</li>
+</ul>
+<h2 id="security-hardening-checklist-sign-off">Security hardening checklist (sign-off)</h2>
+<p>Walk this and cite the enforcing policy for each:</p>
+<div class="codehilite"><pre><span></span><code>[ ] mTLS required on ALL token + resource endpoints           (Day 16)
+[ ] FAPI: PAR enforced, PS256 only, no RS256/none             (Day 18/19)
+[ ] Access tokens certificate-bound; wrong-cert → 401         (Day 19/24)
+[ ] private_key_jwt / tls_client_auth client auth only        (Day 18)
+[ ] Detached JWS validated on writes; tamper → 401            (Day 23)
+[ ] Consent status + expiry + permission enforced everywhere  (Day 21/22)
+[ ] Threat protection + regex + CORS allowlist at the edge    (Day 17)
+[ ] No secrets/PII in logs or traces; mask config applied     (Day 17/28)
+[ ] Short-lived tokens; exact redirect_uri match; nonce/state (Day 18)
+[ ] Quotas/spike arrest tuned per TPP                         (Day 6/13)
+</code></pre></div>
+
+<h2 id="operability-runbooks">Operability &amp; runbooks</h2>
+<p>Production needs documented responses to predictable failures:</p>
+<div class="codehilite"><pre><span></span><code>Runbook: &quot;TPP reports 403 on all AISP calls&quot;
+  1. Pull audit logs by software_id + interactionId (Day 28 query)
+  2. Check consent status in store — Authorised? expired? revoked?
+  3. Check token cnf thumbprint vs presented cert (cert rotation?)
+  4. Check JWKS cache for the TPP — stale after their key rotation?
+  Escalation: ... | Rollback: redeploy previous revision (Day 26)
+</code></pre></div>
+
+<p>Have runbooks for: certificate/key rotation (Day 16 references → zero downtime), TPP key rotation (JWKS cache flush), region failover drill, and revision rollback.</p>
+<h2 id="compliance-lifecycle">Compliance &amp; lifecycle</h2>
+<ul>
+<li><strong>Auditability</strong> — every transaction reconstructable from <code>interactionId</code> + audit log (Day 28).</li>
+<li><strong>Data residency</strong> — runtime + analytics in <code>europe-west2</code> (Day 2); confirm no data leaves region.</li>
+<li><strong>Conformance</strong> — run the OpenID FAPI + OBIE conformance suites against <code>test</code>; keep the pass report.</li>
+<li><strong>Versioning &amp; deprecation</strong> — <code>v3.1</code> and <code>v4.0</code> side by side (Day 25); published sunset dates via the portal.</li>
+</ul>
+<h2 id="capstone-production-readiness-sign-off">Capstone — production-readiness sign-off</h2>
+<p>Produce the deliverable that proves you're done:</p>
+<ol>
+<li><strong>Run the golden journey</strong> (Day 25) against a <strong>multi-region prod</strong> config.</li>
+<li><strong>Kill a region</strong> (detach one instance) mid-journey and confirm continuity via the other.</li>
+<li><strong>Complete the hardening checklist</strong> above, citing the policy/flow enforcing each line.</li>
+<li><strong>Trigger and resolve</strong> one runbook scenario using only logs/traces (no code reading).</li>
+<li><strong>Export</strong> your conformance + load-test + checklist artifacts as the go-live package.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># final proof: same golden journey, prod hostname, region failover survived</span>
+./scripts/golden-journey.sh<span class="w"> </span>https://api.demobank.example
+<span class="c1"># detach a region, re-run, expect identical success</span>
+apigeecli<span class="w"> </span>instances<span class="w"> </span>attachments<span class="w"> </span>detach<span class="w"> </span>--name<span class="w"> </span>inst-ew1<span class="w"> </span>--env<span class="w"> </span>prod<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+./scripts/golden-journey.sh<span class="w"> </span>https://api.demobank.example<span class="w">   </span><span class="c1"># still 2xx end-to-end</span>
+</code></pre></div>
+
+<h2 id="youre-done-what-you-can-now-do">You're done — what you can now do</h2>
+<p>Over 30 days you went from the architecture diagram to a <strong>production-grade, FAPI-secured UK Open Banking platform</strong> on Apigee X:</p>
+<ul>
+<li><strong>Build</strong> proxies, flows, and the full policy toolkit (Weeks 1–2).</li>
+<li><strong>Secure</strong> them with keys, OAuth, JWT, mTLS, threat protection, and <strong>FAPI 1.0 Advanced</strong> (Week 3).</li>
+<li><strong>Implement</strong> consent, AISP, PISP, and DCR end to end (Week 4).</li>
+<li><strong>Operate</strong> them with environments, CI/CD, observability, products, and production readiness (Week 5).</li>
+</ul>
+<h2 id="where-to-go-next">Where to go next</h2>
+<ul>
+<li>Run the <strong>OpenID FAPI conformance suite</strong> against your build and close any gaps.</li>
+<li>Explore <strong>Apigee hybrid</strong> if data sovereignty needs the runtime in your own GKE.</li>
+<li>Add <strong>Event Notifications</strong> (OBIE <code>event-subscriptions</code>) and <strong>Variable Recurring Payments (VRP)</strong> as the natural next OBIE families.</li>
+<li>Templatize your shared flows + estate as an internal <strong>Open Banking accelerator</strong> for the next team.</li>
+</ul>
+<h2 id="final-check">Final check</h2>
+<ol>
+<li>Your consent store goes down. Do AISP data calls fail <strong>open</strong> or <strong>closed</strong> — and why?</li>
+<li>Name the single artifact that lets you reconstruct any transaction for an audit.</li>
+<li>A region fails. What keeps traffic serving, and what did you do on Day 2 to make that possible?</li>
+</ol>
+<p><strong>Congratulations — you've completed the 30-Day Apigee X Open Banking training.</strong> Return to the <a href="index.html">overview</a> any time, or fork the repo and adapt it for your own team.</p><div class="pager">
+<a class="prev" href="day-29.html">&larr; Day 29</a>
+<a class="next" href="index.html">Finish &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

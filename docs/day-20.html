@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 20 — UK Open Banking landscape & trust framework · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li class="active"><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Open Banking &middot; Week 4 &middot; ~55 min</div><h1 id="day-20-uk-open-banking-landscape-trust-framework">Day 20 — UK Open Banking landscape &amp; trust framework</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll map the OBIE ecosystem — the <strong>roles</strong>, the <strong>Directory</strong>, and the <strong>eIDAS/OB certificates</strong> — so every API you build in Week 4 has a clear "who is calling, and how do I trust them?" answer.</p>
+<p><strong>Builds on Day 19:</strong> the FAPI authorization server you built is the <em>security layer</em>; this is the <em>ecosystem</em> it operates inside.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Open Banking isn't just APIs — it's a <strong>regulated trust framework</strong>. You can't design the consent or payment APIs without knowing which actor does what, how they're identified, and which certificate proves it. Get the roles wrong and your authorization logic is wrong.</p>
+<h2 id="the-actors">The actors</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Full name</th>
+<th>What they do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ASPSP</strong></td>
+<td>Account Servicing Payment Service Provider</td>
+<td><strong>The bank</strong> — holds accounts, exposes the APIs. <em>This is you.</em></td>
+</tr>
+<tr>
+<td><strong>TPP</strong></td>
+<td>Third Party Provider</td>
+<td>The fintech calling your APIs. Umbrella term for the three below.</td>
+</tr>
+<tr>
+<td><strong>AISP</strong></td>
+<td>Account Information Service Provider</td>
+<td>Reads account data (budgeting, aggregation apps)</td>
+</tr>
+<tr>
+<td><strong>PISP</strong></td>
+<td>Payment Initiation Service Provider</td>
+<td>Initiates payments on the user's behalf</td>
+</tr>
+<tr>
+<td><strong>CBPII</strong></td>
+<td>Card-Based Payment Instrument Issuer</td>
+<td>Confirms funds availability</td>
+</tr>
+<tr>
+<td><strong>PSU</strong></td>
+<td>Payment Service User</td>
+<td>The <strong>end customer</strong> whose accounts/consent are involved</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>The <strong>PSU consents</strong>, the <strong>TPP acts</strong>, the <strong>ASPSP (you) enforces</strong>. Memorize that triangle — it's the spine of every flow in Week 4.</p>
+</blockquote>
+<h2 id="the-governing-pieces">The governing pieces</h2>
+<ul>
+<li><strong>OBIE</strong> (Open Banking Implementation Entity) — defines the <strong>Read/Write API specifications</strong> (Accounts, Payments, Confirmation of Funds, Events), the <strong>security profile</strong> (FAPI), the <strong>operational guidelines</strong>, and the <strong>customer experience guidelines (CEG)</strong>.</li>
+<li><strong>The OB Directory</strong> — the ecosystem registry. Every participant is enrolled; it issues/anchors certificates and publishes each TPP's <strong>JWKS</strong> and <strong>Software Statement Assertions (SSA)</strong>. Your proxy fetches a TPP's signing keys from here (Day 24).</li>
+<li><strong>The FCA register / passporting</strong> — establishes that a TPP is <em>authorized and regulated</em> to perform AISP/PISP roles.</li>
+</ul>
+<h2 id="the-certificates-this-trips-everyone-up">The certificates (this trips everyone up)</h2>
+<p>UK Open Banking uses two certificate types per participant, issued under the OB / eIDAS trust framework:</p>
+<table>
+<thead>
+<tr>
+<th>Cert</th>
+<th>Purpose</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OBWAC</strong> (or eIDAS <strong>QWAC</strong>)</td>
+<td><em>Transport</em> — Web Authentication Certificate</td>
+<td><strong>mTLS</strong> between TPP and ASPSP (Day 16)</td>
+</tr>
+<tr>
+<td><strong>OBSEAL</strong> (or eIDAS <strong>QSEAL</strong>)</td>
+<td><em>Signing</em> — Seal Certificate</td>
+<td><strong>Message signing</strong> (the <code>x-jws-signature</code> JWS) and signing request objects</td>
+</tr>
+</tbody>
+</table>
+<div class="codehilite"><pre><span></span><code>TPP presents OBWAC  ──mTLS──►  ASPSP   (transport identity)
+TPP signs with OBSEAL ─JWS──►  payload (non-repudiation / integrity)
+</code></pre></div>
+
+<p>So a single TPP request to you involves <strong>two</strong> certificates: one secures the <em>pipe</em> (OBWAC/QWAC), one seals the <em>message</em> (OBSEAL/QSEAL). Your proxy validates both.</p>
+<h2 id="the-software-statement-assertion-ssa">The Software Statement Assertion (SSA)</h2>
+<p>The <strong>SSA</strong> is a signed JWT issued by the Directory describing a TPP's software: its <code>software_id</code>, registered <code>redirect_uris</code>, roles (AISP/PISP/CBPII), and JWKS URI. During <strong>Dynamic Client Registration</strong> (Day 24) the TPP presents its SSA; you verify the Directory's signature and auto-provision a client from it. The SSA is how onboarding scales to hundreds of TPPs without manual setup.</p>
+<h2 id="the-api-families-youll-build">The API families you'll build</h2>
+<table>
+<thead>
+<tr>
+<th>OBIE API</th>
+<th>Endpoints (v3.1)</th>
+<th>Week 4 day</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Account &amp; Transaction</strong></td>
+<td><code>/account-access-consents</code>, <code>/accounts</code>, <code>/balances</code>, <code>/transactions</code></td>
+<td>Days 21–22</td>
+</tr>
+<tr>
+<td><strong>Payment Initiation</strong></td>
+<td><code>/domestic-payment-consents</code>, <code>/domestic-payments</code></td>
+<td>Day 23</td>
+</tr>
+<tr>
+<td><strong>Confirmation of Funds</strong></td>
+<td><code>/funds-confirmation-consents</code>, <code>/funds-confirmations</code></td>
+<td>(referenced)</td>
+</tr>
+<tr>
+<td><strong>Event Notification</strong></td>
+<td><code>/event-subscriptions</code>, callbacks</td>
+<td>(referenced)</td>
+</tr>
+</tbody>
+</table>
+<p>All sit under a versioned base path like <code>/open-banking/v3.1/aisp/...</code> and <code>/open-banking/v3.1/pisp/...</code>.</p>
+<h2 id="lab-model-your-ecosystem">Lab — model your ecosystem</h2>
+<ol>
+<li>Draw the trust triangle (PSU ↔ TPP ↔ ASPSP) and annotate <strong>which certificate</strong> secures the TPP→ASPSP edge and <strong>which</strong> seals the payload.</li>
+<li>For each role (AISP, PISP, CBPII) write the <strong>one</strong> OBIE API family it primarily uses.</li>
+<li>Sketch the base-path scheme you'll deploy on Apigee:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>https://api.demobank.example/open-banking/v3.1/aisp/account-access-consents
+https://api.demobank.example/open-banking/v3.1/aisp/accounts
+https://api.demobank.example/open-banking/v3.1/pisp/domestic-payment-consents
+https://api.demobank.example/open-banking/v3.1/pisp/domestic-payments
+</code></pre></div>
+
+<ol start="4">
+<li>Map the actors onto your Day-13 Apigee objects: a <strong>TPP</strong> = a developer + app; its <strong>roles</strong> = scopes/products; its <strong>OBWAC</strong> = the mTLS client cert; its <strong>OBSEAL</strong> = the JWKS used by VerifyJWT.</li>
+</ol>
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Name every OBIE <strong>role</strong> and the <strong>PSU–TPP–ASPSP</strong> trust triangle.</li>
+<li>Explain the <strong>Directory</strong>, <strong>SSA</strong>, and the <strong>OBWAC vs OBSEAL</strong> certificate split.</li>
+<li>Map ecosystem actors onto the <strong>Apigee objects</strong> you've already built.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Which certificate secures the mTLS connection, and which signs the message body?</li>
+<li>Who <em>consents</em>, who <em>acts</em>, and who <em>enforces</em>?</li>
+<li>What is an SSA, and at which point in onboarding is it used?</li>
+</ol>
+<p><strong>Next:</strong> Day 21 — build the first real OB surface: the <strong>account-access consent</strong> lifecycle.</p><div class="pager">
+<a class="prev" href="day-19.html">&larr; Day 19</a>
+<a class="next" href="day-21.html">Day 21 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

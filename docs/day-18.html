@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 18 — FAPI 1.0 Advanced: the security profile · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li class="active"><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Security &middot; Week 3 &middot; ~65 min</div><h1 id="day-18-fapi-10-advanced-the-security-profile">Day 18 — FAPI 1.0 Advanced: the security profile</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll read the <strong>FAPI 1.0 Advanced</strong> security profile requirement-by-requirement and map each one to a concrete Apigee mechanism you've already learned — so tomorrow you can build it.</p>
+<p><strong>Builds on Days 14–17:</strong> FAPI is not new technology; it's a <em>strict configuration</em> of OAuth, JWT, and mTLS with extra rules.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>UK Open Banking mandates <strong>FAPI 1.0 Advanced</strong> for the security of account and payment APIs. "Make it FAPI-compliant" is a checklist, and conformance is tested (the OpenID Foundation FAPI conformance suite). Knowing the checklist — and where each item lives in Apigee — is the difference between passing and a failed audit.</p>
+<h2 id="what-fapi-is">What FAPI is</h2>
+<p>FAPI (Financial-grade API) is an OpenID Foundation profile that tightens OAuth 2.0 / OpenID Connect for high-value APIs. <strong>FAPI 1.0</strong> has two profiles:</p>
+<ul>
+<li><strong>Baseline</strong> (read-only / lower risk)</li>
+<li><strong>Advanced</strong> (read-write / payments) ← what UK OB requires</li>
+</ul>
+<p>It constrains <em>how</em> you use OAuth: which grant types, which algorithms, how the client authenticates, how requests and responses are integrity-protected, and how tokens are bound to the client.</p>
+<h2 id="the-fapi-10-advanced-checklist-apigee-mapping">The FAPI 1.0 Advanced checklist → Apigee mapping</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>FAPI Advanced requirement</th>
+<th>What it means</th>
+<th>Apigee mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Authorization-code flow only</strong> (no implicit)</td>
+<td><code>response_type=code</code> (or <code>code id_token</code>)</td>
+<td>OAuthV2 GenerateAuthorizationCode (Day 15)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>PKCE</strong> (S256)</td>
+<td>Code-interception defense</td>
+<td>S256 check (Day 15)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Confidential client auth</strong> via <code>private_key_jwt</code> <strong>or</strong> <code>tls_client_auth</code> (mTLS)</td>
+<td>No shared client secrets</td>
+<td>VerifyJWT on <code>client_assertion</code>, <strong>or</strong> mTLS cert → app mapping (Day 16)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Signed request object</strong> (PS256)</td>
+<td>Authorization params are integrity-protected in a JWT (<code>request</code>/<code>request_uri</code>)</td>
+<td>VerifyJWT <code>&lt;Algorithm&gt;PS256&lt;/Algorithm&gt;</code> (Day 15)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>PAR — Pushed Authorization Requests</strong></td>
+<td>Client pushes the request object to a back-channel <code>/par</code> endpoint first, gets a <code>request_uri</code></td>
+<td>A proxy flow that VerifyJWTs and stores it (Day 19)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Sender-constrained / certificate-bound tokens</strong></td>
+<td>Access token bound to the client's mTLS cert (<code>cnf</code>/<code>x5t#S256</code>)</td>
+<td>Bind at token issue; verify thumbprint on resource calls (Day 16/24)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong><code>PS256</code> / <code>ES256</code> signatures only</strong> (no <code>RS256</code>, no <code>none</code>)</td>
+<td>Strong algorithms</td>
+<td>GenerateJWT/VerifyJWT <code>&lt;Algorithm&gt;</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>JARM or signed id_token with <code>s_hash</code>/<code>c_hash</code></strong></td>
+<td>Authorization <em>response</em> integrity</td>
+<td>GenerateJWT for the response/id_token with hash claims (Day 19)</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong><code>nonce</code> + <code>state</code></strong> required and validated</td>
+<td>Replay/CSRF defense</td>
+<td>Validate in the authorize flow</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong><code>x-fapi-interaction-id</code></strong> echoed; <strong><code>x-fapi-auth-date</code></strong>, <strong><code>x-fapi-customer-ip-address</code></strong> handled</td>
+<td>Traceability headers</td>
+<td>AssignMessage (Day 5/12)</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>mTLS on all token &amp; resource endpoints</strong></td>
+<td>Transport-level client auth</td>
+<td>Northbound mTLS (Day 16)</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Short-lived access tokens</strong>, exact-match <code>redirect_uri</code>, no token in URL</td>
+<td>Hardening</td>
+<td>OAuthV2 <code>ExpiresIn</code>, strict redirect validation</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>The big four to internalize:</strong> (a) <strong>PAR</strong> pushes the signed request object up front; (b) the request object is a <strong>PS256 JWT</strong>; (c) the client authenticates with <strong>private_key_jwt or mTLS</strong>; (d) tokens are <strong>certificate-bound</strong>. Everything else is hardening around those.</p>
+</blockquote>
+<h2 id="how-the-pieces-fit-in-a-fapi-authorization">How the pieces fit in a FAPI authorization</h2>
+<div class="codehilite"><pre><span></span><code>1. TPP signs a request object (PS256 JWT) with its OB signing key.
+2. TPP → POST /par  (mTLS, client_assertion=private_key_jwt, request=&lt;JWT&gt;)
+        Apigee verifies client + request object, returns request_uri.
+3. TPP → GET /authorize?client_id=..&amp;request_uri=..   (user consents)
+        Apigee returns code (+ optional id_token with c_hash/s_hash) → JARM-protected.
+4. TPP → POST /token  (mTLS, client_assertion, code, code_verifier)
+        Apigee issues a cert-bound access token (cnf.x5t#S256 = TPP cert thumbprint).
+5. TPP → GET /accounts  (mTLS, Bearer token)
+        Apigee verifies token AND that the presenting cert == cnf thumbprint.
+</code></pre></div>
+
+<p>Notice: <strong>every</strong> numbered Apigee mechanism from Days 14–17 appears here. FAPI is the assembly.</p>
+<h2 id="private_key_jwt-client-authentication"><code>private_key_jwt</code> client authentication</h2>
+<p>Instead of a client secret, the TPP signs a short JWT (<code>client_assertion</code>) proving key possession. Apigee verifies it against the TPP's registered JWKS:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;VerifyJWT</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;JWT-VerifyClientAssertion&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Algorithm&gt;</span>PS256<span class="nt">&lt;/Algorithm&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Source&gt;</span>request.formparam.client_assertion<span class="nt">&lt;/Source&gt;</span>
+<span class="w">  </span><span class="nt">&lt;PublicKey&gt;&lt;JWKS</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;tpp.jwks&quot;</span><span class="nt">/&gt;&lt;/PublicKey&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Issuer&gt;</span>{request.formparam.client_id}<span class="nt">&lt;/Issuer&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Subject&gt;</span>{request.formparam.client_id}<span class="nt">&lt;/Subject&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Audience&gt;</span>https://{RUNTIME_HOST}/oauth/token<span class="nt">&lt;/Audience&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AdditionalClaims&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Claim</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;jti&quot;</span><span class="nt">/&gt;</span><span class="w">   </span><span class="cm">&lt;!-- must be present &amp; one-time (replay defense) --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/AdditionalClaims&gt;</span>
+<span class="nt">&lt;/VerifyJWT&gt;</span>
+</code></pre></div>
+
+<h2 id="lab-audit-a-flow-against-the-checklist">Lab — audit a flow against the checklist</h2>
+<p>You won't build today (that's Day 19) — you'll <em>assess</em>:</p>
+<ol>
+<li>Take your Day 15 auth-code proxy. Walk the 12-row table and mark each row <strong>present / missing</strong>. You'll likely find PAR, PS256 request objects, private_key_jwt, and cert-binding all missing — that's exactly Day 19's work.</li>
+<li>Write down, for your proxy, <em>which policy file</em> will satisfy each missing row. This is your build plan.</li>
+<li>Download the <strong>OpenID Foundation FAPI conformance suite</strong> test list and note which tests map to rows 4, 5, 6, 8 — these are the ones teams most often fail.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code># Your gap list should look like:
+[ ] PAR endpoint                → new flow + VerifyJWT + short-lived request_uri store
+[ ] PS256 request object        → VerifyJWT (PS256) on request/request_uri
+[ ] private_key_jwt client auth → VerifyJWT on client_assertion
+[ ] cert-bound tokens           → add cnf.x5t#S256 at issue; verify at resource
+[ ] JARM / c_hash,s_hash        → GenerateJWT response object
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>State the <strong>FAPI 1.0 Advanced</strong> requirements as a checklist.</li>
+<li>Map <strong>every</strong> requirement to an Apigee mechanism you already know.</li>
+<li>Recognize the <strong>big four</strong> (PAR, PS256 request object, private_key_jwt/mTLS, cert-bound tokens).</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Which signing algorithms does FAPI Advanced permit — and which does it forbid?</li>
+<li>What does PAR move <em>off</em> the front channel, and why is that safer?</li>
+<li>"Sender-constrained token" — bound to <em>what</em>, and verified <em>how</em> on a resource call?</li>
+</ol>
+<p><strong>Next:</strong> Day 19 — Week 3 capstone: <strong>build</strong> the FAPI flow — PAR, signed request object, private_key_jwt, and a certificate-bound token.</p><div class="pager">
+<a class="prev" href="day-17.html">&larr; Day 17</a>
+<a class="next" href="day-19.html">Day 19 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

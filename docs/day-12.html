@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 12 — Shared flows, flow hooks & reuse (Week 2 capstone) · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li class="active"><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Mediation &middot; Week 2 &middot; ~70 min</div><h1 id="day-12-shared-flows-flow-hooks-reuse-week-2-capstone">Day 12 — Shared flows, flow hooks &amp; reuse (Week 2 capstone)</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll extract cross-cutting logic (FAPI header checks, error formatting, logging) into a <strong>shared flow</strong>, call it from any proxy with <strong>FlowCallout</strong>, and attach it to <em>every</em> proxy in an environment with a <strong>flow hook</strong> — then assemble a clean "house style" proxy.</p>
+<p><strong>Builds on Days 5–11:</strong> every policy you've written is a candidate for sharing. Today you stop copy-pasting them.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>Across a bank's API estate, the same 8–10 policies repeat in every proxy: spike arrest, FAPI header validation, correlation id, standard error mapping, audit logging. Copy-paste is a governance failure — fix a bug in one place and 40 proxies still have it. Shared flows make cross-cutting concerns <strong>write-once, enforce-everywhere</strong>.</p>
+<h2 id="shared-flow-vs-flow-callout-vs-flow-hook">Shared flow vs flow callout vs flow hook</h2>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Shared flow</strong></td>
+<td>A standalone bundle of policies — like a proxy with no endpoints, deployable on its own</td>
+</tr>
+<tr>
+<td><strong>FlowCallout</strong></td>
+<td>A policy you put <em>inside a proxy</em> to invoke a shared flow at a chosen point</td>
+</tr>
+<tr>
+<td><strong>Flow hook</strong></td>
+<td>An environment-level attachment that runs a shared flow <strong>automatically</strong> for <em>all</em> proxies (pre-proxy, post-proxy, etc.) — no per-proxy edit</td>
+</tr>
+</tbody>
+</table>
+<h2 id="build-a-shared-flow">Build a shared flow</h2>
+<p>A shared flow bundle mirrors a proxy bundle but uses <code>sharedflowbundle/</code> and <code>sharedflows/</code> instead of <code>apiproxy/proxies</code>:</p>
+<div class="codehilite"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>sf-fapi-inbound/sharedflowbundle/<span class="o">{</span>policies,sharedflows<span class="o">}</span>
+
+cat<span class="w"> </span>&gt;<span class="w"> </span>sf-fapi-inbound/sharedflowbundle/sf-fapi-inbound.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;SharedFlowBundle name=&quot;sf-fapi-inbound&quot; revision=&quot;1&quot;&gt;</span>
+<span class="s">  &lt;DisplayName&gt;sf-fapi-inbound&lt;/DisplayName&gt;</span>
+<span class="s">&lt;/SharedFlowBundle&gt;</span>
+<span class="s">XML</span>
+
+<span class="c1"># the shared flow definition (entry point)</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>sf-fapi-inbound/sharedflowbundle/sharedflows/default.xml<span class="w"> </span><span class="s">&lt;&lt;&#39;XML&#39;</span>
+<span class="s">&lt;SharedFlow name=&quot;default&quot;&gt;</span>
+<span class="s">  &lt;Step&gt;&lt;Name&gt;SA-Smooth&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="s">  &lt;Step&gt;&lt;Name&gt;RF-MissingFapiHeader&lt;/Name&gt;</span>
+<span class="s">    &lt;Condition&gt;request.header.x-fapi-interaction-id = null&lt;/Condition&gt;</span>
+<span class="s">  &lt;/Step&gt;</span>
+<span class="s">  &lt;Step&gt;&lt;Name&gt;AM-EnsureInteractionId&lt;/Name&gt;&lt;/Step&gt;</span>
+<span class="s">&lt;/SharedFlow&gt;</span>
+<span class="s">XML</span>
+</code></pre></div>
+
+<p>Add the referenced policies into <code>sf-fapi-inbound/sharedflowbundle/policies/</code> (reuse <code>SA-Smooth.xml</code>; create the two below):</p>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/RF-MissingFapiHeader.xml --&gt;</span>
+<span class="nt">&lt;RaiseFault</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;RF-MissingFapiHeader&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;FaultResponse&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Set&gt;</span>
+<span class="w">      </span><span class="nt">&lt;StatusCode&gt;</span>400<span class="nt">&lt;/StatusCode&gt;</span>
+<span class="w">      </span><span class="nt">&lt;Payload</span><span class="w"> </span><span class="na">contentType=</span><span class="s">&quot;application/json&quot;</span><span class="nt">&gt;</span>{&quot;Code&quot;:&quot;400<span class="w"> </span>BadRequest&quot;,&quot;Errors&quot;:[{&quot;ErrorCode&quot;:&quot;UK.OBIE.Header.Missing&quot;,&quot;Message&quot;:&quot;x-fapi-interaction-id<span class="w"> </span>is<span class="w"> </span>required.&quot;}]}<span class="nt">&lt;/Payload&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/Set&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/FaultResponse&gt;</span>
+<span class="nt">&lt;/RaiseFault&gt;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/AM-EnsureInteractionId.xml : echo it on the response for correlation --&gt;</span>
+<span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-EnsureInteractionId&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Name&gt;</span>fapi.interactionId<span class="nt">&lt;/Name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Template&gt;</span>{request.header.x-fapi-interaction-id}<span class="nt">&lt;/Template&gt;</span>
+<span class="w">    </span><span class="nt">&lt;Value&gt;</span>{createUuid()}<span class="nt">&lt;/Value&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/AssignVariable&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<p>Deploy the shared flow like a proxy:</p>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>sharedflows<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>sf-fapi-inbound<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sf-folder<span class="w"> </span>./sf-fapi-inbound/sharedflowbundle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+apigeecli<span class="w"> </span>sharedflows<span class="w"> </span>deploy<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>sf-fapi-inbound<span class="w"> </span>--rev<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h2 id="call-it-from-a-proxy-flowcallout">Call it from a proxy (FlowCallout)</h2>
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/FC-FapiInbound.xml --&gt;</span>
+<span class="nt">&lt;FlowCallout</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;FC-FapiInbound&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;DisplayName&gt;</span>FC-FapiInbound<span class="nt">&lt;/DisplayName&gt;</span>
+<span class="w">  </span><span class="nt">&lt;SharedFlowBundle&gt;</span>sf-fapi-inbound<span class="nt">&lt;/SharedFlowBundle&gt;</span>
+<span class="nt">&lt;/FlowCallout&gt;</span>
+</code></pre></div>
+
+<p>Attach in the proxy's PreFlow.Request:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&lt;PreFlow</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;PreFlow&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Request&gt;&lt;Step&gt;&lt;Name&gt;</span>FC-FapiInbound<span class="nt">&lt;/Name&gt;&lt;/Step&gt;&lt;/Request&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Response/&gt;</span>
+<span class="nt">&lt;/PreFlow&gt;</span>
+</code></pre></div>
+
+<h2 id="or-attach-it-to-everything-flow-hook">Or attach it to everything (flow hook)</h2>
+<p>A <strong>flow hook</strong> binds a shared flow to a position for <em>all</em> proxies in the environment. Positions: <code>pre-proxy</code>, <code>post-proxy</code>, <code>pre-target</code>, <code>post-target</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># attach sf-fapi-inbound to the pre-proxy hook of this environment</span>
+apigeecli<span class="w"> </span>flowhooks<span class="w"> </span>attach<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>pre-proxy<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sharedflow<span class="w"> </span>sf-fapi-inbound<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<p>Now <strong>every</strong> proxy in <code>eval</code> runs FAPI header validation first — even ones you haven't written yet. That's platform-level governance.</p>
+<blockquote>
+<p><strong>Use a flow hook for guarantees you want unconditional</strong> (security headers, global rate limiting, audit logging). Use a <strong>FlowCallout</strong> when only <em>some</em> proxies need the logic, or when ordering relative to other in-proxy steps matters.</p>
+</blockquote>
+<h2 id="capstone-the-house-style-proxy">Capstone — the "house style" proxy</h2>
+<p>Assemble everything from Week 2 into one clean AISP-shaped proxy:</p>
+<ol>
+<li>PreFlow runs <code>FC-FapiInbound</code> (shared) → <code>Q-PerApp</code> (quota).</li>
+<li>Conditional flows for <code>GET /accounts</code>, <code>GET /accounts/{id}/balances</code>, <code>GET /accounts/{id}/transactions</code>, each running <code>EV-AccountId</code>.</li>
+<li>TargetEndpoint uses the <code>core-banking</code> <strong>TargetServer</strong> and a <strong>ResponseCache</strong> for the (mock) reference data.</li>
+<li>A full <strong>FaultRules + DefaultFaultRule</strong> block returning OBIE errors.</li>
+<li>PostFlow adds standard headers and echoes <code>fapi.interactionId</code>.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>apigeecli<span class="w"> </span>apis<span class="w"> </span>create<span class="w"> </span>bundle<span class="w"> </span>--name<span class="w"> </span>aisp-house-style<span class="w"> </span>--proxy-folder<span class="w"> </span>./aisp-house-style/apiproxy<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>aisp-house-style<span class="w"> </span>--rev<span class="w"> </span><span class="m">1</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENV</span><span class="s2">&quot;</span><span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># missing FAPI header → 400 from the shared flow (via flow hook OR flow callout)</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/accounts&quot;</span>
+<span class="c1"># with the header → proceeds</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}\n&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-fapi-interaction-id: </span><span class="k">$(</span>uuidgen<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;https://</span><span class="nv">$RUNTIME_HOST</span><span class="s2">/aisp-house-style/accounts&quot;</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Build, deploy, and version a <strong>shared flow</strong>.</li>
+<li>Invoke it per-proxy with <strong>FlowCallout</strong>, or globally with a <strong>flow hook</strong>.</li>
+<li>Assemble a maintainable proxy where cross-cutting concerns live in <strong>one</strong> place.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>You must guarantee <em>every</em> proxy logs an audit event. FlowCallout or flow hook?</li>
+<li>What's the structural difference between a shared flow bundle and a proxy bundle?</li>
+<li>Why is copy-pasting the spike-arrest policy into 40 proxies a governance problem?</li>
+</ol>
+<p><strong>Next:</strong> Day 13 — Week 3 (Security) opens with <strong>app identity</strong>: API keys, API products, developer apps, and <code>VerifyAPIKey</code>.</p><div class="pager">
+<a class="prev" href="day-11.html">&larr; Day 11</a>
+<a class="next" href="day-13.html">Day 13 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

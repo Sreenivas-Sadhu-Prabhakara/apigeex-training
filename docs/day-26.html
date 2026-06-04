@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 26 — Environments, env groups, revisions & config · Apigee X 30-Day Training</title>
+  <link rel="stylesheet" href="assets/pygments.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Curriculum">
+<a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
+<ul>
+<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+</ul>
+<div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
+<ul>
+<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
+<ul>
+<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+</ul>
+<div class="nav-week">Week 4 — UK Open Banking Domain</div>
+<ul>
+<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+</ul>
+<div class="nav-week">Week 5 — Operations, Delivery & Production</div>
+<ul>
+<li class="active"><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+</ul>
+</nav>
+    <main class="content">
+      <div class="crumbs">Operations &middot; Week 5 &middot; ~55 min</div><h1 id="day-26-environments-env-groups-revisions-config">Day 26 — Environments, env groups, revisions &amp; config</h1>
+<blockquote>
+<p><strong>Bottom line:</strong> You'll promote a proxy from <code>test</code> to <code>prod</code> the right way — using <strong>revisions</strong>, <strong>environment-specific config</strong> (KVMs, property sets, TargetServers), and <strong>environment groups</strong> for hostnames — so the <em>same bundle</em> runs everywhere with different settings.</p>
+<p><strong>Builds on Day 2 &amp; 10:</strong> you saw env groups and KVMs created; today you use them as a promotion model.</p>
+</blockquote>
+<h2 id="why-this-matters">Why this matters</h2>
+<p>In banking you never edit a proxy in production. You promote an <strong>identical artifact</strong> through environments, changing only configuration. If a proxy needs code changes to move from test to prod, your config-vs-code boundary is wrong. Today you fix that boundary.</p>
+<h2 id="the-promotion-model">The promotion model</h2>
+<div class="codehilite"><pre><span></span><code>ONE proxy bundle (revision N)  ─────────────────────────────────►
+   deployed to:   test env            prod env
+   reads:         test KVM/propset     prod KVM/propset
+   targets:       test TargetServer    prod TargetServer  (same NAME, different host)
+   reachable via: test env group       prod env group     (different hostnames)
+</code></pre></div>
+
+<p>The bundle contains <strong>zero</strong> environment-specific values. Everything that differs lives outside it, keyed by name.</p>
+<h2 id="environments-environment-groups">Environments &amp; environment groups</h2>
+<p>Add a <code>test</code> and <code>prod</code> environment, each with its own group + hostname:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># create environments</span>
+apigeecli<span class="w"> </span>envs<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>envs<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>prod<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># attach each to a runtime instance (eval has one; prod may have several)</span>
+apigeecli<span class="w"> </span>instances<span class="w"> </span>attachments<span class="w"> </span>attach<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$INSTANCE</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>instances<span class="w"> </span>attachments<span class="w"> </span>attach<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$INSTANCE</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span>prod<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># environment groups bind hostnames</span>
+apigeecli<span class="w"> </span>envgroups<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>ob-test<span class="w"> </span>--hosts<span class="w"> </span><span class="s2">&quot;api-test.demobank.example&quot;</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>envgroups<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>ob-prod<span class="w"> </span>--hosts<span class="w"> </span><span class="s2">&quot;api.demobank.example&quot;</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>envgroups<span class="w"> </span>attach<span class="w"> </span>--name<span class="w"> </span>ob-test<span class="w"> </span>--env<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+apigeecli<span class="w"> </span>envgroups<span class="w"> </span>attach<span class="w"> </span>--name<span class="w"> </span>ob-prod<span class="w"> </span>--env<span class="w"> </span>prod<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p>A request reaches an environment because its <strong><code>Host</code> header</strong> matches a hostname on that environment's group. Same proxy, two hostnames, two environments — no bundle change.</p>
+</blockquote>
+<h2 id="revisions">Revisions</h2>
+<p>Every <code>apis create bundle</code> for an existing proxy stores a <strong>new revision</strong>. Deployments target a <em>revision</em> per environment, so <code>test</code> can run rev 8 while <code>prod</code> runs rev 7 — that's your staged rollout.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># promote the exact revision that passed test into prod</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>deploy<span class="w"> </span>--name<span class="w"> </span>ob-aisp<span class="w"> </span>--rev<span class="w"> </span><span class="m">8</span><span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span>prod<span class="w"> </span>--ovr<span class="w"> </span>--wait<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># what&#39;s where?</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>listdeploy<span class="w"> </span>--name<span class="w"> </span>ob-aisp<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.deployments[] | {env:.environment, rev:.revision}&#39;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>Promotion = redeploying the already-built revision to the next environment.</strong> You do <strong>not</strong> rebuild for prod. Rebuilding risks a different artifact than the one you tested.</p>
+</blockquote>
+<h2 id="environment-specific-config-three-tools">Environment-specific config — three tools</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Holds</th>
+<th>Mutability</th>
+<th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>TargetServer</strong></td>
+<td>host/port/TLS of a backend</td>
+<td>Live edit</td>
+<td>Backend endpoints that differ per env</td>
+</tr>
+<tr>
+<td><strong>KVM</strong></td>
+<td>key/value pairs (encrypted)</td>
+<td>Live edit (runtime)</td>
+<td>Config + light secrets, runtime-updatable</td>
+</tr>
+<tr>
+<td><strong>Property set</strong></td>
+<td>key/value pairs in the bundle or env</td>
+<td>Bundle/deploy-time</td>
+<td>Static-ish config you want versioned with intent</td>
+</tr>
+</tbody>
+</table>
+<p>Property sets are read with the <code>propertyset.&lt;name&gt;.&lt;key&gt;</code> variable:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># attach a property set to the prod environment</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>ob.properties<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
+<span class="s">consent.maxExpiryDays=90</span>
+<span class="s">payments.fundsCheck.enabled=true</span>
+<span class="s">core.timeout.ms=4000</span>
+<span class="s">EOF</span>
+apigeecli<span class="w"> </span>env-config<span class="w"> </span>propertysets<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>ob<span class="w"> </span>--propsetfile<span class="w"> </span>./ob.properties<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--env<span class="w"> </span>prod<span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- read it in a policy --&gt;</span>
+<span class="nt">&lt;AssignMessage</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AM-ReadConfig&quot;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;AssignVariable&gt;&lt;Name&gt;</span>cfg.fundsCheck<span class="nt">&lt;/Name&gt;&lt;Ref&gt;</span>propertyset.ob.payments.fundsCheck.enabled<span class="nt">&lt;/Ref&gt;&lt;/AssignVariable&gt;</span>
+<span class="nt">&lt;/AssignMessage&gt;</span>
+</code></pre></div>
+
+<h2 id="lab-promote-ob-aisp-test-prod">Lab — promote ob-aisp test → prod</h2>
+<ol>
+<li>Create <code>test</code> + <code>prod</code> environments and groups (above), each with a <code>core-banking</code> TargetServer pointing at <em>different</em> hosts.</li>
+<li>Deploy <code>ob-aisp</code> rev N to <code>test</code>; run the golden journey against the <strong>test hostname</strong>.</li>
+<li>Promote the <strong>same rev</strong> to <code>prod</code>; run against the <strong>prod hostname</strong>. Confirm it hit the prod TargetServer (different backend) with no bundle change.</li>
+<li>Change a property-set value in prod only (e.g. <code>core.timeout.ms</code>) and confirm test is unaffected.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># prove they&#39;re the same artifact, different config</span>
+apigeecli<span class="w"> </span>apis<span class="w"> </span>listdeploy<span class="w"> </span>--name<span class="w"> </span>ob-aisp<span class="w"> </span>--org<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ORG</span><span class="s2">&quot;</span><span class="w"> </span>--token<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.deployments[] | {env:.environment, rev:.revision}&#39;</span>
+<span class="c1"># both envs → same rev number == identical bundle</span>
+</code></pre></div>
+
+<h2 id="recap-you-can-now">Recap — you can now…</h2>
+<ul>
+<li>Promote an <strong>identical revision</strong> across environments instead of editing prod.</li>
+<li>Route environments by <strong>hostname</strong> via environment groups.</li>
+<li>Externalize all env-specific values into <strong>TargetServers, KVMs, and property sets</strong>.</li>
+</ul>
+<h2 id="check-yourself">Check yourself</h2>
+<ol>
+<li>Why is rebuilding a separate bundle for prod a risk?</li>
+<li>What determines which environment a given request lands in?</li>
+<li>Where does the backend hostname for <code>prod</code> live, if not in the bundle?</li>
+</ol>
+<p><strong>Next:</strong> Day 27 — make promotion automatic and repeatable: <strong>CI/CD and config-as-code</strong> with apigeecli and GitHub Actions.</p><div class="pager">
+<a class="prev" href="day-25.html">&larr; Day 25</a>
+<a class="next" href="day-27.html">Day 27 &rarr;</a>
+</div>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>
