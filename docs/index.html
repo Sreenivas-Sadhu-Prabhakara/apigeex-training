@@ -6,56 +6,59 @@
   <title>30-Day Apigee X Training · API proxy development for banking & UK Open Banking (FAPI)</title>
   <link rel="stylesheet" href="assets/pygments.css">
   <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/widgets.css">
 </head>
 <body>
+  <div id="readingBar"></div>
   <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
   <div class="layout">
     <nav class="sidebar" aria-label="Curriculum">
 <a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-progress"><div class="nav-progress-bar"><span id="navProgressFill"></span></div><span id="navProgressText" class="nav-progress-text">0 / 30 complete</span></div>
 <div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
 <ul>
-<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
-<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
-<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
-<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
-<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+<li data-day="1"><a href="day-01.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li data-day="2"><a href="day-02.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li data-day="3"><a href="day-03.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li data-day="4"><a href="day-04.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li data-day="5"><a href="day-05.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
 </ul>
 <div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
 <ul>
-<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
-<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
-<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
-<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
-<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
-<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
-<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+<li data-day="6"><a href="day-06.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li data-day="7"><a href="day-07.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li data-day="8"><a href="day-08.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li data-day="9"><a href="day-09.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li data-day="10"><a href="day-10.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li data-day="11"><a href="day-11.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li data-day="12"><a href="day-12.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
 </ul>
 <div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
 <ul>
-<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
-<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
-<li><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
-<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
-<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
-<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
-<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+<li data-day="13"><a href="day-13.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li data-day="14"><a href="day-14.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li data-day="15"><a href="day-15.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li data-day="16"><a href="day-16.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li data-day="17"><a href="day-17.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li data-day="18"><a href="day-18.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li data-day="19"><a href="day-19.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
 </ul>
 <div class="nav-week">Week 4 — UK Open Banking Domain</div>
 <ul>
-<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
-<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
-<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
-<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
-<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
-<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+<li data-day="20"><a href="day-20.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li data-day="21"><a href="day-21.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li data-day="22"><a href="day-22.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li data-day="23"><a href="day-23.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li data-day="24"><a href="day-24.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li data-day="25"><a href="day-25.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
 </ul>
 <div class="nav-week">Week 5 — Operations, Delivery & Production</div>
 <ul>
-<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
-<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
-<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
-<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
-<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+<li data-day="26"><a href="day-26.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li data-day="27"><a href="day-27.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li data-day="28"><a href="day-28.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li data-day="29"><a href="day-29.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li data-day="30"><a href="day-30.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
 </ul>
 </nav>
     <main class="content index">
@@ -72,6 +75,18 @@
 <li><strong>MECE:</strong> the five pillars below are <strong>mutually exclusive</strong> (no topic is taught in two places) and <strong>collectively exhaustive</strong> (together they cover "all aspects" of Apigee X relevant to banking).</li>
 <li><strong>Atomic, but cumulative:</strong> each day is self-contained — one objective, one lab — yet explicitly <strong>builds on</strong> the day before. Skipping is possible but the Open Banking weeks assume the security week.</li>
 </ul>
+<pre class="mermaid">flowchart LR
+  A[&quot;Foundations&lt;br/&gt;Days 1-2&quot;] --&gt; B[&quot;Proxy Dev&lt;br/&gt;Days 3-5&quot;]
+  B --&gt; C[&quot;Mediation&lt;br/&gt;Days 6-12&quot;]
+  C --&gt; D[&quot;Security &amp; FAPI&lt;br/&gt;Days 13-19&quot;]
+  D --&gt; E[&quot;Open Banking&lt;br/&gt;Days 20-25&quot;]
+  E --&gt; F[&quot;Operations&lt;br/&gt;Days 26-30&quot;]
+  style A fill:#eef4ff,stroke:#1a73e8
+  style B fill:#f3eefe,stroke:#8a5cf6
+  style C fill:#e6f7f7,stroke:#0aa3a3
+  style D fill:#fff1e3,stroke:#e8710a
+  style E fill:#eafaf0,stroke:#0b8043
+  style F fill:#fdeceb,stroke:#d93025</pre>
 <div class="pillars">
 <div class="pillar-card"><h4>1 · Foundations</h4>Platform, architecture, provisioning, and your toolchain. <em>Days 1–2.</em></div>
 <div class="pillar-card"><h4>2 · Proxy Development</h4>Proxies, flows, routing, and the policy execution model. <em>Days 3–5.</em></div>
@@ -80,6 +95,9 @@
 <div class="pillar-card"><h4>5 · Open Banking + Ops</h4>Consent, AISP, PISP, DCR, then delivery &amp; production. <em>Days 20–30.</em></div>
 </div>
 
+<h2 id="explore-the-30-days">Explore the 30 days</h2>
+<p>Filter by pillar, see your progress, and jump straight in. (Your completion ticks are saved in your browser as you mark days done.)</p>
+<div class="widget" data-widget="curriculummap"><script type="application/json">{"type": "curriculummap"}</script></div>
 <h2 id="what-you-need">What you need</h2>
 <ul>
 <li>A Google Cloud account with billing enabled (an Apigee X <strong>evaluation</strong> org is free for 60 days — set up on Day 2).</li>
@@ -254,7 +272,26 @@
 <hr />
 <p><small>This is an independent training resource. "Apigee", "Google Cloud", and related marks belong to Google. "Open Banking" specifications belong to the Open Banking Implementation Entity (OBIE). Always validate against the current official specifications before production use.</small></p>
     </main>
+    
   </div>
-  <script src="assets/app.js"></script>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'loose',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#eef4ff', primaryBorderColor: '#1a73e8', primaryTextColor: '#15233a',
+        lineColor: '#5b6b7b', secondaryColor: '#eafaf0', tertiaryColor: '#fff6e6',
+        fontFamily: '-apple-system, Segoe UI, Roboto, sans-serif', fontSize: '14px'
+      }
+    });
+    window.__mermaidReady = true;
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="assets/widgets.js"></script>
+  <script defer src="assets/app.js"></script>
+
 </body>
 </html>

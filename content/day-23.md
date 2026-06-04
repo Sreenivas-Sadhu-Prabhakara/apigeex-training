@@ -18,6 +18,47 @@ Payments are irreversible and high-value, so the spec adds protections AISP does
    → Status=AcceptedSettlementInProcess (then settlement async)
 ```
 
+```widget
+{"type":"sequence","title":"Two-step payment, step by step","actors":[
+  {"id":"tpp","label":"TPP (PISP)"},
+  {"id":"as","label":"Apigee"},
+  {"id":"rail","label":"Payment rail / core"}
+],"steps":[
+  {"from":"tpp","to":"as","label":"POST /domestic-payment-consents (signed)","note":"The TPP declares the Initiation — amount, creditor, reference. This is immutable once set."},
+  {"from":"as","to":"as","label":"verify detached JWS + validate","note":"The OBSEAL-signed body is verified, the Initiation validated, and the consent stored as AwaitingAuthorisation."},
+  {"from":"as","to":"tpp","label":"ConsentId","kind":"return","note":"A reference to the pending payment consent."},
+  {"from":"tpp","to":"as","label":"PSU authorises (auth-code)","note":"The PSU approves this SPECIFIC payment; status → Authorised and the token carries the ConsentId."},
+  {"from":"tpp","to":"as","label":"POST /domestic-payments (signed)","note":"The submission body's Initiation must EXACTLY equal the consented Initiation."},
+  {"from":"as","to":"as","label":"idempotency + match + funds","note":"Idempotency key checked (no double-pay), Initiation compared, optional funds-confirmation."},
+  {"from":"as","to":"rail","label":"submit payment","note":"Apigee calls the core payment rail."},
+  {"from":"rail","to":"as","label":"accepted","kind":"return","note":"The rail accepts the instruction for settlement."},
+  {"from":"as","to":"tpp","label":"AcceptedSettlementInProcess","kind":"return","note":"Status returned to the TPP; settlement completes asynchronously."}
+]}
+```
+
+```widget
+{"type":"statemachine","title":"Payment status after submission","start":"proc",
+ "states":[
+   {"id":"proc","label":"AcceptedSettlementInProcess"},
+   {"id":"pending","label":"Pending"},
+   {"id":"done","label":"AcceptedSettlementCompleted","terminal":true},
+   {"id":"rej","label":"Rejected","terminal":true}
+ ],
+ "events":[
+   {"id":"settle","label":"Settles"},
+   {"id":"hold","label":"Goes pending"},
+   {"id":"clear","label":"Clears"},
+   {"id":"fail","label":"Fails"}
+ ],
+ "transitions":[
+   {"from":"proc","event":"settle","to":"done","desc":"Funds settled successfully."},
+   {"from":"proc","event":"hold","to":"pending","desc":"Held for checks before settlement."},
+   {"from":"proc","event":"fail","to":"rej","desc":"Rejected before settlement."},
+   {"from":"pending","event":"clear","to":"done","desc":"Checks pass; settlement completes."},
+   {"from":"pending","event":"fail","to":"rej","desc":"Checks fail; payment rejected."}
+ ]}
+```
+
 Payment consent statuses: `AwaitingAuthorisation` → `Authorised` / `Rejected` → (`Consumed` after the payment is created).
 Payment statuses: `AcceptedSettlementInProcess`, `AcceptedSettlementCompleted`, `Pending`, `Rejected`.
 

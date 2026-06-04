@@ -17,6 +17,17 @@ FAPI (Financial-grade API) is an OpenID Foundation profile that tightens OAuth 2
 
 It constrains *how* you use OAuth: which grant types, which algorithms, how the client authenticates, how requests and responses are integrity-protected, and how tokens are bound to the client.
 
+```widget
+{"type":"chart","title":"Plain OAuth 2.0 vs FAPI 1.0 Advanced","chartType":"radar","height":360,
+ "data":{"labels":["Client auth strength","Request integrity (PAR/JWT)","Token binding (cert)","Response integrity (JARM)","Algorithm strictness","PKCE / replay defense"],
+  "datasets":[
+    {"label":"Plain OAuth 2.0","data":[2,1,0,0,1,1],"borderColor":"#9aa7b6","backgroundColor":"rgba(154,167,182,0.25)"},
+    {"label":"FAPI 1.0 Advanced","data":[5,5,5,4,5,5],"borderColor":"#1a73e8","backgroundColor":"rgba(26,115,232,0.20)"}
+  ]},
+ "options":{"scales":{"r":{"min":0,"max":5,"ticks":{"stepSize":1}}}},
+ "caption":"FAPI doesn't add new technology — it ratchets every OAuth dimension to its strongest setting."}
+```
+
 ## The FAPI 1.0 Advanced checklist → Apigee mapping
 
 | # | FAPI Advanced requirement | What it means | Apigee mechanism |
@@ -98,5 +109,13 @@ You won't build today (that's Day 19) — you'll *assess*:
 1. Which signing algorithms does FAPI Advanced permit — and which does it forbid?
 2. What does PAR move *off* the front channel, and why is that safer?
 3. "Sender-constrained token" — bound to *what*, and verified *how* on a resource call?
+
+```widget
+{"type":"quiz","title":"Day 18 check","questions":[
+  {"q":"Which signing algorithms does FAPI 1.0 Advanced permit?","options":["PS256 / ES256","RS256 only","HS256 (HMAC)","'none' is allowed for testing"],"answer":0,"explain":"FAPI Advanced requires PS256 or ES256 and explicitly forbids RS256 and 'none'."},
+  {"q":"What does PAR (Pushed Authorization Requests) move off the front channel?","options":["The (signed) authorization request object","The issued access token","The user's password","The API product definition"],"answer":0,"explain":"The client pushes the request object to a back-channel /par endpoint first and gets a request_uri — keeping request parameters out of the browser URL where they could be tampered with."},
+  {"q":"A 'sender-constrained' access token is bound to…","options":["The client's mTLS certificate (cnf / x5t#S256)","The user's IP address","The redirect_uri","The environment group"],"answer":0,"explain":"The token carries the client cert thumbprint; the resource verifies the presenting cert matches, so a stolen token can't be replayed without the private key."}
+]}
+```
 
 **Next:** Day 19 — Week 3 capstone: **build** the FAPI flow — PAR, signed request object, private_key_jwt, and a certificate-bound token.

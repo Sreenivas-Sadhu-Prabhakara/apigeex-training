@@ -30,6 +30,24 @@ Backends (TargetServers, per-environment)
   core-banking, payment-rail, consent-store
 ```
 
+```mermaid
+flowchart LR
+  FAS["fapi-as<br/>PAR · authorize · token"] --> FIN["sf-fapi-inbound"]
+  DCR["ob-dcr<br/>/register"] --> FIN
+  AISP["ob-aisp"] --> FIN
+  PISP["ob-pisp"] --> FIN
+  AISP --> SCG["sf-consent-guard"]
+  PISP --> SCG
+  PISP --> JWS["sf-jws-verify"]
+  AISP --> CORE["core-banking"]
+  PISP --> RAIL["payment-rail"]
+  AISP --> CS["consent-store"]
+  style FAS fill:#fff1e3,stroke:#e8710a
+  style CORE fill:#eafaf0,stroke:#0b8043
+  style RAIL fill:#eafaf0,stroke:#0b8043
+  style CS fill:#eafaf0,stroke:#0b8043
+```
+
 > **Boundary rule:** one proxy per OBIE API family, security centralized in `fapi-as` + shared flows. Don't fold AISP and PISP into one proxy — they have different scopes, products, and risk, and you want to deploy/rate-limit them independently.
 
 ## Consistent base paths & versioning

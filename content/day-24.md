@@ -21,6 +21,22 @@ ASPSP:
   5. Return the client_id (+ registration response)
 ```
 
+```widget
+{"type":"sequence","title":"Dynamic Client Registration, step by step","actors":[
+  {"id":"tpp","label":"TPP"},
+  {"id":"as","label":"Apigee /register"},
+  {"id":"dir","label":"OB Directory"}
+],"steps":[
+  {"from":"tpp","to":"as","label":"POST /register (mTLS OBWAC)","note":"The TPP submits a signed registration request JWT that embeds the Directory-issued Software Statement (SSA)."},
+  {"from":"as","to":"as","label":"verify registration JWT (TPP OBSEAL)","note":"Confirms the registration request is signed by the TPP's own key."},
+  {"from":"as","to":"dir","label":"fetch Directory JWKS","note":"Apigee retrieves the OB Directory's public keys — the trust anchor for the whole ecosystem."},
+  {"from":"dir","to":"as","label":"JWKS","kind":"return","note":"Cached aggressively; these keys change rarely."},
+  {"from":"as","to":"as","label":"verify SSA vs Directory JWKS","note":"If the SSA signature verifies, the Directory issued it — so its claims (software_id, redirect_uris, roles, jwks_uri) can be trusted."},
+  {"from":"as","to":"as","label":"create developer + app","note":"Provision an Apigee app from the SSA; map SSA roles (AISP/PISP) to API products; store jwks_uri + cert thumbprint as attributes."},
+  {"from":"as","to":"tpp","label":"client_id (+ registration response)","kind":"return","note":"The TPP now has an OAuth client and can run the FAPI token flow — no manual onboarding."}
+]}
+```
+
 ## 1 — Verify the registration request and the SSA
 
 ```xml

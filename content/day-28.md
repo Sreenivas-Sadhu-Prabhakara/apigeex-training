@@ -36,6 +36,18 @@ Then build a **custom report** grouping by `ax.obApi` and `responseStatusCode` t
 apigeecli analytics reports ... # or the Apigee UI → Analyze → Custom Reports
 ```
 
+```widget
+{"type":"chart","title":"Sample analytics: AISP vs PISP traffic & error rate","chartType":"line","height":310,
+ "data":{"labels":["00:00","04:00","08:00","12:00","16:00","20:00","23:00"],
+  "datasets":[
+    {"label":"AISP req/s","data":[40,28,120,260,300,210,90],"borderColor":"#1a73e8","backgroundColor":"rgba(26,115,232,0.10)","tension":0.35,"fill":true},
+    {"label":"PISP req/s","data":[8,5,30,75,90,60,20],"borderColor":"#0b8043","backgroundColor":"rgba(11,128,67,0.10)","tension":0.35,"fill":true},
+    {"label":"errors %","data":[1,1,2,3,5,2,1],"borderColor":"#d93025","yAxisID":"y1","tension":0.35}
+  ]},
+ "options":{"scales":{"y":{"title":{"display":true,"text":"req/s"}},"y1":{"position":"right","min":0,"max":10,"grid":{"drawOnChartArea":false},"title":{"display":true,"text":"error %"}}}},
+ "caption":"What an Apigee custom report surfaces: throughput per API plus error-rate trend. The 16:00 error bump is your cue to open a Debug session."}
+```
+
 ## MessageLogging → Cloud Logging (audit trail)
 
 `MessageLogging` ships structured logs to **Cloud Logging**. This is your regulator-grade audit trail — but **never log secrets, tokens, or PANs**.
@@ -81,6 +93,18 @@ apigeecli env trace enable --env prod --org "$ORG" \
 ```
 
 > Sample (e.g. 50%) in prod to control cost; trace shows whether a slow `/transactions` is your proxy, the consent-store callout, or the core. Propagate `traceparent` to the backend so the trace spans your whole system.
+
+```widget
+{"type":"chart","title":"Where the latency goes (Cloud Trace, p95)","chartType":"bar","height":300,
+ "data":{"labels":["/accounts","/balances","/transactions","/domestic-payments"],
+  "datasets":[
+    {"label":"Apigee policies","data":[8,7,12,18],"backgroundColor":"#1a73e8"},
+    {"label":"Consent-store callout","data":[15,15,15,15],"backgroundColor":"#e8710a"},
+    {"label":"Core backend","data":[40,35,180,90],"backgroundColor":"#0b8043"}
+  ]},
+ "options":{"scales":{"x":{"stacked":true},"y":{"stacked":true,"title":{"display":true,"text":"ms"}}}},
+ "caption":"Trace attributes each hop. /transactions is slow because of the CORE, not your proxy — so cache or paginate; don't micro-optimize policies."}
+```
 
 ## Debug sessions (live troubleshooting)
 

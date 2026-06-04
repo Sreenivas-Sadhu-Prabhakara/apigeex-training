@@ -21,6 +21,28 @@ TPP (authorization_code token, bound to ConsentId)
 Later: PSU or TPP revokes → Status=Revoked
 ```
 
+```widget
+{"type":"statemachine","title":"Drive the consent lifecycle","start":"await",
+ "states":[
+   {"id":"await","label":"AwaitingAuthorisation"},
+   {"id":"auth","label":"Authorised"},
+   {"id":"rej","label":"Rejected","terminal":true},
+   {"id":"rev","label":"Revoked","terminal":true}
+ ],
+ "events":[
+   {"id":"approve","label":"PSU approves"},
+   {"id":"reject","label":"PSU rejects"},
+   {"id":"revoke","label":"Revoke"}
+ ],
+ "transitions":[
+   {"from":"await","event":"approve","to":"auth","desc":"PSU authenticates and approves; the issued access token now carries the ConsentId."},
+   {"from":"await","event":"reject","to":"rej","desc":"PSU declines — data access is never granted."},
+   {"from":"auth","event":"revoke","to":"rev","desc":"PSU or TPP withdraws consent; all data calls must now be refused."}
+ ]}
+```
+
+> Notice the widget **disables events that aren't valid in the current state** — you can't `Revoke` something still `AwaitingAuthorisation`, and terminal states accept nothing. That's exactly the enforcement your consent-guard shared flow implements.
+
 | Status | Meaning |
 |--------|---------|
 | `AwaitingAuthorisation` | Created, not yet approved by the PSU |
@@ -140,5 +162,13 @@ curl -s -X DELETE ".../account-access-consents/$CONSENT" -H "Authorization: Bear
 1. What links a PSU's authorization to a *specific* consent?
 2. Which permission must a consent hold for a TPP to read detailed transactions?
 3. Why is a KVM a poor production store for consent state?
+
+```widget
+{"type":"quiz","title":"Day 21 check","questions":[
+  {"q":"What links a PSU's authorization to a SPECIFIC consent?","options":["The openbanking_intent_id claim (the ConsentId)","The redirect_uri","The client_secret","The API key"],"answer":0,"explain":"The TPP puts the ConsentId in the openbanking_intent_id claim of the request object; after approval the access token is bound to that consent."},
+  {"q":"Which permission must a consent hold to read DETAILED transactions?","options":["ReadTransactionsDetail","ReadAccountsBasic","ReadBalances","ReadProducts"],"answer":0,"explain":"Detailed transaction access requires ReadTransactionsDetail (plus Credits/Debits scopes as needed)."},
+  {"q":"Why is a KVM a poor PRODUCTION store for consent state?","options":["Consent is high-volume, frequently-changing state — use a real datastore","KVMs can't be encrypted","KVMs aren't per-environment","KVMs can't be read at runtime"],"answer":0,"explain":"KVMs suit config and light secrets. Consent changes constantly and at volume — back it with Firestore/Cloud SQL/the core via ServiceCallout."}
+]}
+```
 
 **Next:** Day 22 — use that consent to serve real data: the **AISP Accounts, Balances, and Transactions** APIs.

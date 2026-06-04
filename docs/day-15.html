@@ -6,59 +6,62 @@
   <title>Day 15 — OAuth authorization code + PKCE & JWT · Apigee X 30-Day Training</title>
   <link rel="stylesheet" href="assets/pygments.css">
   <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/widgets.css">
 </head>
 <body>
+  <div id="readingBar"></div>
   <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">&#9776; Menu</button>
   <div class="layout">
     <nav class="sidebar" aria-label="Curriculum">
 <a class="brand" href="index.html">Apigee&nbsp;X &middot; 30 Days</a>
+<div class="nav-progress"><div class="nav-progress-bar"><span id="navProgressFill"></span></div><span id="navProgressText" class="nav-progress-text">0 / 30 complete</span></div>
 <div class="nav-week">Week 1 — Foundations & Your First Proxy</div>
 <ul>
-<li><a href="day-01.html"><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
-<li><a href="day-02.html"><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
-<li><a href="day-03.html"><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
-<li><a href="day-04.html"><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
-<li><a href="day-05.html"><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
+<li data-day="1"><a href="day-01.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 01</span> Apigee X: the platform & architecture</a></li>
+<li data-day="2"><a href="day-02.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 02</span> Provision Apigee X & your toolchain</a></li>
+<li data-day="3"><a href="day-03.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 03</span> Build & deploy your first API proxy</a></li>
+<li data-day="4"><a href="day-04.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 04</span> Flows, conditions & routing</a></li>
+<li data-day="5"><a href="day-05.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 05</span> Policies 101 & the execution model</a></li>
 </ul>
 <div class="nav-week">Week 2 — Core Proxy Development & Mediation</div>
 <ul>
-<li><a href="day-06.html"><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
-<li><a href="day-07.html"><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
-<li><a href="day-08.html"><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
-<li><a href="day-09.html"><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
-<li><a href="day-10.html"><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
-<li><a href="day-11.html"><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
-<li><a href="day-12.html"><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
+<li data-day="6"><a href="day-06.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 06</span> Traffic management: quotas & rate limiting</a></li>
+<li data-day="7"><a href="day-07.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 07</span> Mediation & variables: AssignMessage + ExtractVariables</a></li>
+<li data-day="8"><a href="day-08.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 08</span> Transformation with JavaScript & message templates</a></li>
+<li data-day="9"><a href="day-09.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 09</span> Service composition: ServiceCallout & target servers</a></li>
+<li data-day="10"><a href="day-10.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 10</span> Caching: response, lookup/populate & KVM</a></li>
+<li data-day="11"><a href="day-11.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 11</span> Fault handling & error taxonomy</a></li>
+<li data-day="12"><a href="day-12.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 12</span> Shared flows, flow hooks & reuse (Week 2 capstone)</a></li>
 </ul>
 <div class="nav-week">Week 3 — Security & Identity (through FAPI)</div>
 <ul>
-<li><a href="day-13.html"><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
-<li><a href="day-14.html"><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
-<li class="active"><a href="day-15.html"><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
-<li><a href="day-16.html"><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
-<li><a href="day-17.html"><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
-<li><a href="day-18.html"><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
-<li><a href="day-19.html"><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
+<li data-day="13"><a href="day-13.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 13</span> App identity: API keys, products, apps & developers</a></li>
+<li data-day="14"><a href="day-14.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 14</span> OAuth 2.0: client credentials & token endpoints</a></li>
+<li class="active" data-day="15"><a href="day-15.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 15</span> OAuth authorization code + PKCE & JWT</a></li>
+<li data-day="16"><a href="day-16.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 16</span> Transport security: TLS, mTLS & keystores</a></li>
+<li data-day="17"><a href="day-17.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 17</span> Threat protection, CORS & data masking</a></li>
+<li data-day="18"><a href="day-18.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 18</span> FAPI 1.0 Advanced: the security profile</a></li>
+<li data-day="19"><a href="day-19.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 19</span> Implementing FAPI on Apigee (Week 3 capstone)</a></li>
 </ul>
 <div class="nav-week">Week 4 — UK Open Banking Domain</div>
 <ul>
-<li><a href="day-20.html"><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
-<li><a href="day-21.html"><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
-<li><a href="day-22.html"><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
-<li><a href="day-23.html"><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
-<li><a href="day-24.html"><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
-<li><a href="day-25.html"><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
+<li data-day="20"><a href="day-20.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 20</span> UK Open Banking landscape & trust framework</a></li>
+<li data-day="21"><a href="day-21.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 21</span> Consent: the account-access consent model</a></li>
+<li data-day="22"><a href="day-22.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 22</span> AISP: account information APIs</a></li>
+<li data-day="23"><a href="day-23.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 23</span> PISP: payment initiation APIs</a></li>
+<li data-day="24"><a href="day-24.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 24</span> Dynamic Client Registration, SSA & cert-bound tokens</a></li>
+<li data-day="25"><a href="day-25.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 25</span> End-to-end Open Banking reference build (capstone)</a></li>
 </ul>
 <div class="nav-week">Week 5 — Operations, Delivery & Production</div>
 <ul>
-<li><a href="day-26.html"><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
-<li><a href="day-27.html"><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
-<li><a href="day-28.html"><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
-<li><a href="day-29.html"><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
-<li><a href="day-30.html"><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
+<li data-day="26"><a href="day-26.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 26</span> Environments, env groups, revisions & config</a></li>
+<li data-day="27"><a href="day-27.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 27</span> CI/CD & config-as-code with apigeecli</a></li>
+<li data-day="28"><a href="day-28.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 28</span> Observability: analytics, logging, tracing & debug</a></li>
+<li data-day="29"><a href="day-29.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 29</span> API products, portal, monetization & API hub</a></li>
+<li data-day="30"><a href="day-30.html"><span class="done-check" aria-hidden="true">&#10003;</span><span class="daynum">Day 30</span> Production readiness & Open Banking capstone</a></li>
 </ul>
 </nav>
-    <main class="content">
+    <main class="content" data-day="15">
       <div class="crumbs">Security &middot; Week 3 &middot; ~65 min</div><h1 id="day-15-oauth-authorization-code-pkce-jwt">Day 15 — OAuth authorization code + PKCE &amp; JWT</h1>
 <blockquote>
 <p><strong>Bottom line:</strong> You'll implement the user-present <strong>authorization-code + PKCE</strong> flow on Apigee, and mint/verify <strong>JWTs</strong> with GenerateJWT/VerifyJWT — the exact pieces Open Banking's consent and <code>id_token</code> need.</p>
@@ -75,6 +78,7 @@
 4. Apigee verifies code + PKCE, returns access_token (+ refresh_token, id_token)
 </code></pre></div>
 
+<div class="widget" data-widget="sequence"><script type="application/json">{"type": "sequence", "title": "Authorization code + PKCE, step by step", "actors": [{"id": "app", "label": "TPP app"}, {"id": "psu", "label": "PSU (browser)"}, {"id": "as", "label": "Apigee authz server"}], "steps": [{"from": "app", "to": "as", "label": "/authorize + code_challenge (S256)", "note": "The app starts the flow and sends a PKCE code_challenge \u2014 the SHA-256 hash of a secret code_verifier it keeps to itself."}, {"from": "as", "to": "psu", "label": "login + consent screen", "note": "Apigee delegates user authentication to your login app/IdP and shows the consent screen."}, {"from": "psu", "to": "as", "label": "authenticate + approve", "kind": "return", "note": "The PSU logs in and approves the requested access."}, {"from": "as", "to": "app", "label": "redirect ?code=\u2026", "kind": "return", "note": "Apigee issues an authorization code, storing the code_challenge alongside it."}, {"from": "app", "to": "as", "label": "POST /token + code_verifier", "note": "The app redeems the code, now revealing the original code_verifier."}, {"from": "as", "to": "as", "label": "SHA256(verifier) == challenge?", "note": "Apigee recomputes S256(code_verifier) and compares to the stored challenge. This is what defeats an intercepted authorization code."}, {"from": "as", "to": "app", "label": "access_token + id_token", "kind": "return", "note": "Match \u2192 tokens issued. A stolen code is useless without the matching verifier."}]}</script></div>
 <h3 id="the-authorize-endpoint">The /authorize endpoint</h3>
 <div class="codehilite"><pre><span></span><code><span class="cm">&lt;!-- policies/OA-GenerateAuthCode.xml --&gt;</span>
 <span class="nt">&lt;OAuthV2</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;OA-GenerateAuthCode&quot;</span><span class="nt">&gt;</span>
@@ -206,12 +210,49 @@ curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>
 <li>Which JWT policy reads claims <em>without</em> checking the signature?</li>
 <li>Which signing algorithm does FAPI Advanced require?</li>
 </ol>
-<p><strong>Next:</strong> Day 16 — the <em>transport</em> layer those keys live in: <strong>TLS, mutual TLS, keystores and truststores</strong>.</p><div class="pager">
+<p><strong>Next:</strong> Day 16 — the <em>transport</em> layer those keys live in: <strong>TLS, mutual TLS, keystores and truststores</strong>.</p><div class="day-complete" data-day="15"><button id="markComplete" type="button" class="mark-btn"><span class="mark-box">&#10003;</span> Mark Day 15 complete</button><span class="mark-hint">Progress is saved in your browser.</span></div><div class="pager">
 <a class="prev" href="day-14.html">&larr; Day 14</a>
 <a class="next" href="day-16.html">Day 16 &rarr;</a>
 </div>
     </main>
+    <aside class="toc-rail" aria-label="On this page"><div class="toc-title">On this page</div><div class="toc">
+<ul>
+<li><a href="#why-this-matters">Why this matters</a></li>
+<li><a href="#authorization-code-pkce-end-to-end">Authorization-code + PKCE, end to end</a><ul>
+<li><a href="#the-authorize-endpoint">The /authorize endpoint</a></li>
+<li><a href="#the-token-endpoint-auth-code-grant-pkce-verification">The /token endpoint (auth-code grant + PKCE verification)</a></li>
+</ul>
+</li>
+<li><a href="#jwt-policies">JWT policies</a><ul>
+<li><a href="#mint-a-signed-id_token">Mint a signed id_token</a></li>
+<li><a href="#verify-an-incoming-jwt-eg-a-tpps-signed-request-object">Verify an incoming JWT (e.g. a TPP's signed request object)</a></li>
+</ul>
+</li>
+<li><a href="#lab-auth-code-pkce-round-trip">Lab — auth code + PKCE round trip</a></li>
+<li><a href="#recap-you-can-now">Recap — you can now…</a></li>
+<li><a href="#check-yourself">Check yourself</a></li>
+</ul>
+</div>
+</aside>
   </div>
-  <script src="assets/app.js"></script>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'loose',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#eef4ff', primaryBorderColor: '#1a73e8', primaryTextColor: '#15233a',
+        lineColor: '#5b6b7b', secondaryColor: '#eafaf0', tertiaryColor: '#fff6e6',
+        fontFamily: '-apple-system, Segoe UI, Roboto, sans-serif', fontSize: '14px'
+      }
+    });
+    window.__mermaidReady = true;
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="assets/widgets.js"></script>
+  <script defer src="assets/app.js"></script>
+
 </body>
 </html>

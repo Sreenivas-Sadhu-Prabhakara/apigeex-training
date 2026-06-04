@@ -10,6 +10,24 @@ A self-paced, copy-paste-driven course that takes an API developer from "never t
 - **MINTO / pyramid**: each day leads with the bottom line, then supports it.
 - **MECE**: five pillars cover "all aspects" of Apigee X relevant to banking, with no topic taught twice.
 - **Cumulative**: each day explicitly builds on the previous one.
+- **Interactive & visual**: Mermaid diagrams, a request-pipeline animator, step-through OAuth/FAPI/payment sequence diagrams, consent/payment state-machine explorers, a SpikeArrest rate-limit simulator, Chart.js data visualizations, MCQ quizzes, an interactive curriculum map, per-page "on this page" navigation, and browser-saved progress tracking.
+
+## Interactive content (authoring)
+
+Two custom fenced blocks are processed by `build.py` into client-side components (all rendered statically, no server):
+
+~~~
+```mermaid
+flowchart LR
+  A --> B
+```
+
+```widget
+{"type":"quiz","title":"…","questions":[{"q":"…","options":["a","b"],"answer":0,"explain":"…"}]}
+```
+~~~
+
+`widget` types: `pipeline`, `sequence`, `statemachine`, `ratelimit`, `chart` (Chart.js), `quiz`, `curriculummap`. Each type's config schema lives in `assets/widgets.js`. Mermaid and Chart.js load from CDN; everything else is local vanilla JS.
 
 | Week | Pillar | Days |
 |------|--------|------|

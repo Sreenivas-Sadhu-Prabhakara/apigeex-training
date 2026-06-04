@@ -18,6 +18,26 @@ fapi-as  (one proxy, four flows)
   (resource proxies VerifyAccessToken + check cnf.x5t#S256 == presented cert)
 ```
 
+```widget
+{"type":"sequence","title":"The FAPI dance: PAR → authorize → token → resource","actors":[
+  {"id":"tpp","label":"TPP"},
+  {"id":"as","label":"Apigee FAPI AS"},
+  {"id":"rs","label":"Apigee resource"}
+],"steps":[
+  {"from":"tpp","to":"tpp","label":"sign request object (PS256)","note":"The TPP signs a request object JWT with its OBSEAL key and builds a private_key_jwt client_assertion to authenticate itself."},
+  {"from":"tpp","to":"as","label":"POST /par (mTLS)","note":"Pushed Authorization Request: the signed request object goes up the back channel, with the client_assertion."},
+  {"from":"as","to":"as","label":"verify client + request object","note":"VerifyJWT (PS256) on both; store the claims; mint a one-time, short-lived request_uri."},
+  {"from":"as","to":"tpp","label":"request_uri (60s)","kind":"return","note":"A reference to the stored request — nothing sensitive travels on the front channel."},
+  {"from":"tpp","to":"as","label":"GET /authorize?request_uri","note":"Front channel. Apigee resolves the request_uri, authenticates the PSU and shows consent."},
+  {"from":"as","to":"tpp","label":"code (+ id_token: c_hash/s_hash)","kind":"return","note":"Authorization code issued; the id_token's c_hash/s_hash protect the response integrity (JARM-style)."},
+  {"from":"tpp","to":"as","label":"POST /token (mTLS, code, verifier)","note":"Redeem the code. Apigee stamps cnf.x5t#S256 = the TPP's mTLS cert thumbprint into the token."},
+  {"from":"as","to":"tpp","label":"certificate-bound access_token","kind":"return","note":"The token is now sender-constrained to that exact client certificate."},
+  {"from":"tpp","to":"rs","label":"GET /accounts (mTLS, Bearer)","note":"The TPP calls the resource presenting the same client certificate."},
+  {"from":"rs","to":"rs","label":"token valid AND cnf == cert?","note":"VerifyAccessToken plus a thumbprint match. If the presenting cert differs from cnf, the call is rejected 401."},
+  {"from":"rs","to":"tpp","label":"200 data","kind":"return","note":"Everything checks out → data returns. A stolen token alone is useless without the private key."}
+]}
+```
+
 ## 1 — PAR endpoint
 
 The TPP pushes its request object up front. Verify both the client and the request object, then mint a one-time `request_uri` stored in cache.

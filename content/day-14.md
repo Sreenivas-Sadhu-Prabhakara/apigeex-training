@@ -76,6 +76,21 @@ A clean approach uses a dedicated credential check before `GenerateAccessToken`:
 
 > Set the RouteRule so `/oauth/token` has **no** TargetEndpoint — `GenerateResponse` builds the JSON token response itself.
 
+```widget
+{"type":"sequence","title":"Client-credentials grant, step by step","actors":[
+  {"id":"app","label":"TPP app"},
+  {"id":"as","label":"Apigee · token endpoint"},
+  {"id":"rs","label":"Apigee · resource"}
+],"steps":[
+  {"from":"app","to":"as","label":"POST /oauth/token","note":"The TPP sends grant_type=client_credentials with its client_id and client_secret (the developer app's consumerKey/secret)."},
+  {"from":"as","to":"as","label":"validate client + scopes","note":"Apigee checks the credentials map to a developer app whose API product grants the requested scopes."},
+  {"from":"as","to":"app","label":"access_token (5 min)","kind":"return","note":"A short-lived bearer token is returned. No user is involved — this is machine-to-machine."},
+  {"from":"app","to":"rs","label":"GET /accounts  (Bearer token)","note":"The TPP calls the protected resource, presenting the token in the Authorization header."},
+  {"from":"rs","to":"rs","label":"VerifyAccessToken + scope","note":"The OAuthV2 VerifyAccessToken policy validates the token and required scope before the flow continues."},
+  {"from":"rs","to":"app","label":"200 data","kind":"return","note":"Token valid and scoped → the request proceeds to the backend and data returns."}
+]}
+```
+
 ## Protect a resource with VerifyAccessToken
 
 On the AISP proxy, replace (or add to) VerifyAPIKey with token verification:

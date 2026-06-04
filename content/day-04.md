@@ -31,6 +31,25 @@ RESPONSE
   ProxyEndpoint.PostFlow.Response
 ```
 
+```widget
+{"type":"pipeline","title":"Watch a GET request walk the pipeline","stages":[
+  {"name":"Proxy PreFlow","phase":"req","desc":"Always runs first. SpikeArrest, VerifyAPIKey/OAuth, FAPI header checks belong here."},
+  {"name":"Proxy Flow","phase":"req","desc":"The FIRST conditional flow whose condition matches runs (e.g. GET /accounts). Others are skipped."},
+  {"name":"Proxy PostFlow","phase":"req","desc":"Runs after the matched flow, just before routing is evaluated."},
+  {"name":"RouteRule","phase":"route","desc":"First matching RouteRule selects a TargetEndpoint — or none (a no-route)."},
+  {"name":"Target PreFlow","phase":"req","desc":"Last chance to shape the outbound request: inject backend auth, rewrite the path."},
+  {"name":"Target Flow","phase":"req","desc":"Matched target conditional flow request steps."},
+  {"name":"Target PostFlow","phase":"req","desc":"Final request processing before the backend call."},
+  {"name":"→ Backend","phase":"route","desc":"Apigee calls the backend over southbound TLS/mTLS and waits for the response."},
+  {"name":"Target PreFlow","phase":"res","desc":"Response side begins: first processing of the backend's reply."},
+  {"name":"Target Flow","phase":"res","desc":"Matched target conditional flow response steps."},
+  {"name":"Target PostFlow","phase":"res","desc":"Last target-side response step."},
+  {"name":"Proxy PreFlow","phase":"res","desc":"Response side of the proxy PreFlow."},
+  {"name":"Proxy Flow","phase":"res","desc":"Matched proxy conditional flow response steps."},
+  {"name":"Proxy PostFlow","phase":"res","desc":"Final: standard headers, data masking, logging — then the client sees the response."}
+]}
+```
+
 Two rules that surprise newcomers:
 
 - **PreFlow always runs; conditional flows run only if their condition matches; the *first* matching conditional flow wins** (the rest are skipped).
@@ -128,5 +147,13 @@ The `/health` call will currently fail because no policy builds its response —
 1. Two conditional flows both match a request. Which runs?
 2. What happens to a request whose RouteRule has no `<TargetEndpoint>` and no policy to build a response?
 3. Where would you enforce "every request must carry an `x-fapi-interaction-id` header" so it applies to *all* operations — a conditional flow, or PreFlow?
+
+```widget
+{"type":"quiz","title":"Day 4 check","questions":[
+  {"q":"Two conditional flows both match a request. Which runs?","options":["The first one in document order","Both, in order","The most specific one","Neither — it errors"],"answer":0,"explain":"Conditional flows are first-match-wins. The first matching flow runs; the rest are skipped."},
+  {"q":"A RouteRule has no <TargetEndpoint> and no policy builds a response. What happens?","options":["The request fails — nothing produces a response","Returns 200 with an empty body","It proxies to a default backend","It automatically retries"],"answer":0,"explain":"A no-route skips the backend, so a policy (e.g. AssignMessage) must build the response — otherwise there's nothing to return."},
+  {"q":"Where do you enforce 'every request must carry x-fapi-interaction-id' for ALL operations?","options":["ProxyEndpoint PreFlow","Inside each conditional flow","PostFlow response","A RouteRule condition"],"answer":0,"explain":"PreFlow always runs regardless of which conditional flow matches — the correct home for cross-cutting request checks."}
+]}
+```
 
 **Next:** Day 05 — finally attach **policies** into these flow slots and predict their exact execution point.

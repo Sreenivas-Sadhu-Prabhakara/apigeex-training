@@ -19,6 +19,22 @@ Client credentials is machine-to-machine. But account access requires a **human*
 4. Apigee verifies code + PKCE, returns access_token (+ refresh_token, id_token)
 ```
 
+```widget
+{"type":"sequence","title":"Authorization code + PKCE, step by step","actors":[
+  {"id":"app","label":"TPP app"},
+  {"id":"psu","label":"PSU (browser)"},
+  {"id":"as","label":"Apigee authz server"}
+],"steps":[
+  {"from":"app","to":"as","label":"/authorize + code_challenge (S256)","note":"The app starts the flow and sends a PKCE code_challenge — the SHA-256 hash of a secret code_verifier it keeps to itself."},
+  {"from":"as","to":"psu","label":"login + consent screen","note":"Apigee delegates user authentication to your login app/IdP and shows the consent screen."},
+  {"from":"psu","to":"as","label":"authenticate + approve","kind":"return","note":"The PSU logs in and approves the requested access."},
+  {"from":"as","to":"app","label":"redirect ?code=…","kind":"return","note":"Apigee issues an authorization code, storing the code_challenge alongside it."},
+  {"from":"app","to":"as","label":"POST /token + code_verifier","note":"The app redeems the code, now revealing the original code_verifier."},
+  {"from":"as","to":"as","label":"SHA256(verifier) == challenge?","note":"Apigee recomputes S256(code_verifier) and compares to the stored challenge. This is what defeats an intercepted authorization code."},
+  {"from":"as","to":"app","label":"access_token + id_token","kind":"return","note":"Match → tokens issued. A stolen code is useless without the matching verifier."}
+]}
+```
+
 ### The /authorize endpoint
 
 ```xml

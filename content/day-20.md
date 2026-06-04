@@ -19,6 +19,18 @@ Open Banking isn't just APIs — it's a **regulated trust framework**. You can't
 | **CBPII** | Card-Based Payment Instrument Issuer | Confirms funds availability |
 | **PSU** | Payment Service User | The **end customer** whose accounts/consent are involved |
 
+```mermaid
+flowchart TD
+  PSU["PSU<br/>end customer"] -->|"consents"| TPP["TPP<br/>AISP / PISP"]
+  TPP -->|"acts for PSU<br/>OBWAC mTLS + OBSEAL signing"| ASPSP["ASPSP<br/>the bank — you"]
+  ASPSP -->|"enforces consent"| PSU
+  DIR["OB Directory"] -.->|"issues SSA, anchors certs,<br/>publishes JWKS"| TPP
+  DIR -.-> ASPSP
+  style PSU fill:#eef4ff,stroke:#1a73e8
+  style TPP fill:#fff1e3,stroke:#e8710a
+  style ASPSP fill:#eafaf0,stroke:#0b8043
+```
+
 > The **PSU consents**, the **TPP acts**, the **ASPSP (you) enforces**. Memorize that triangle — it's the spine of every flow in Week 4.
 
 ## The governing pieces

@@ -18,6 +18,13 @@ The gap between "it works in the demo" and "it survives Black Friday, a region o
 | **Connection reuse** | Keep-alive to backends via TargetServer settings; right-size timeouts (`io.timeout.millis`) |
 | **Load test** | Drive expected peak + headroom through `test`; watch p95/p99 and error rate, not just averages |
 
+```widget
+{"type":"chart","title":"A 200 ms latency budget, allocated","chartType":"doughnut","height":300,
+ "data":{"labels":["Apigee policies","mTLS handshake (reused)","Consent/token checks","Core backend","Network"],
+  "datasets":[{"data":[15,10,20,135,20],"backgroundColor":["#1a73e8","#8a5cf6","#e8710a","#0b8043","#9aa7b6"]}]},
+ "caption":"Budget the whole path, then defend each slice. The backend usually dominates — which is why caching and pagination beat policy micro-tuning."}
+```
+
 ## Resilience & multi-region
 
 ```text
@@ -119,5 +126,13 @@ Over 30 days you went from the architecture diagram to a **production-grade, FAP
 1. Your consent store goes down. Do AISP data calls fail **open** or **closed** — and why?
 2. Name the single artifact that lets you reconstruct any transaction for an audit.
 3. A region fails. What keeps traffic serving, and what did you do on Day 2 to make that possible?
+
+```widget
+{"type":"quiz","title":"Final check — graduation","questions":[
+  {"q":"Your consent store goes down. AISP data calls should fail…","options":["Closed — deny access","Open — allow access","Silently return 200 empty","Retry forever"],"answer":0,"explain":"Fail closed. Never serve account data without a verifiable Authorised consent — availability never trumps the consent guarantee."},
+  {"q":"The single artifact that lets you reconstruct any transaction for an audit is…","options":["The structured audit log keyed by x-fapi-interaction-id","The proxy bundle XML","The API product definition","The TLS certificate"],"answer":0,"explain":"Per-transaction audit logs carrying the interaction id are your regulator-grade reconstruction trail (Day 28)."},
+  {"q":"A region fails but traffic keeps serving because…","options":["A second regional instance is attached to prod and the global LB fails over","Apigee instantly rebuilds the region","The control plane serves the traffic","Clients retry until it works"],"answer":0,"explain":"Multi-region HA: instances in 2+ regions attached to the prod environment, with the global load balancer routing around the failed region."}
+]}
+```
 
 **Congratulations — you've completed the 30-Day Apigee X Open Banking training.** Return to the [overview](index.html) any time, or fork the repo and adapt it for your own team.

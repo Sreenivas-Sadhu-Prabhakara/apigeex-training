@@ -18,6 +18,17 @@ In banking, a vague `500` is a support ticket and a trust problem. TPPs integrat
 
 When an error occurs, Apigee **stops the normal flow** and enters error-handling: it evaluates FaultRules top-to-bottom (first match wins unless `<AlwaysEnforce>`), then the DefaultFaultRule.
 
+```mermaid
+flowchart TD
+  E["A policy throws<br/>OR you RaiseFault"] --> FR{"Any FaultRule<br/>condition match?"}
+  FR -->|"Yes — first match wins"| RUN["Run that FaultRule's steps<br/>format the OBIE error"]
+  FR -->|"No match"| DFR["DefaultFaultRule<br/>catch-all"]
+  RUN --> OUT["Consistent OBIE error envelope<br/>returned to the client"]
+  DFR --> OUT
+  style E fill:#fdeceb,stroke:#d93025
+  style OUT fill:#eafaf0,stroke:#0b8043
+```
+
 ## RaiseFault — fail on purpose
 
 ```xml

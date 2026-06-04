@@ -17,6 +17,17 @@ TPP ───────────────► Apigee ──────�
    (2) client mTLS: TPP presents a cert     (4) client mTLS: Apigee presents a cert
 ```
 
+```mermaid
+flowchart LR
+  TPP["TPP"] -->|"presents OBWAC<br/>client cert (mTLS)"| AP["Apigee ingress"]
+  AP -->|"presents server cert"| TPP
+  AP -->|"Keystore = our client cert<br/>presents to backend"| CORE["Core banking"]
+  CORE -->|"presents server cert<br/>validated by our Truststore"| AP
+  style TPP fill:#eef4ff,stroke:#1a73e8
+  style CORE fill:#eafaf0,stroke:#0b8043
+  style AP fill:#fff1e3,stroke:#e8710a
+```
+
 | # | Direction | Who presents a cert | Apigee object |
 |---|-----------|---------------------|---------------|
 | 1 | Apigee → TPP | Apigee (server) | Managed by Google front end + your env-group hostname cert |

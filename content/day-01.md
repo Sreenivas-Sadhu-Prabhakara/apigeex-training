@@ -31,6 +31,19 @@ GCP Project (1:1)
     └── Shared Flows / KVMs / Keystores / TargetServers (shared config)
 ```
 
+```mermaid
+flowchart TD
+  P["GCP Project (1:1)"] --> ORG["Apigee Organization"]
+  ORG --> ENV["Environments<br/>eval · test · prod"]
+  ORG --> EG["Environment Groups<br/>→ hostnames"]
+  ORG --> INST["Instances<br/>regional runtime"]
+  ORG --> PROD["API Products"]
+  ORG --> DEV["Developers & Apps"]
+  ENV --> DEP["Deployed proxy revisions"]
+  EG --> HOST["api.bank.example"]
+  PROD -.granted to.-> DEV
+```
+
 Key facts that trip people up:
 
 - An **organization is bound 1:1 to a GCP project** and is named after it. You do not "create many orgs" casually.
@@ -52,6 +65,18 @@ Apigee runtime instance (region)
   ▼
 Backend / system of record (core banking, ledger, ...)
   ▲  response flows run on the way back
+```
+
+```mermaid
+flowchart LR
+  C["Client app"] -->|"HTTPS · northbound TLS"| LB["Google Front End /<br/>Load Balancer"]
+  LB -->|"Host header → Env Group"| RT["Apigee runtime<br/>region"]
+  RT --> PE["ProxyEndpoint<br/>request policies"]
+  PE --> TE["TargetEndpoint<br/>target policies"]
+  TE -->|"southbound TLS"| BK["Backend /<br/>core banking"]
+  BK -.->|"response flows run on the way back"| C
+  style C fill:#eef4ff,stroke:#1a73e8
+  style BK fill:#eafaf0,stroke:#0b8043
 ```
 
 Two terms you'll hear constantly:
@@ -92,5 +117,13 @@ Per-environment (differs test/prod):   which revision is deployed,
 1. A request returns `404` with no matching proxy. Which object's misconfiguration most likely caused it — the proxy, or the **environment group hostname**?
 2. True/false: deploying a proxy to `prod` automatically deploys it to `test`.
 3. Where does **mutual TLS** for a TPP terminate — northbound or southbound?
+
+```widget
+{"type":"quiz","title":"Day 1 check","questions":[
+  {"q":"A request returns 404 with no matching proxy. The most likely culprit is…","options":["The environment group hostname / base-path routing","The TargetEndpoint backend URL","The API product","The developer app secret"],"answer":0,"explain":"A request reaches an environment by Host header → env group, then base path. A 'no matching proxy' 404 is almost always a routing/base-path mismatch, not a backend problem."},
+  {"q":"Deploying a proxy to prod also deploys it to test.","options":["False — deployment is per-environment","True — deploys propagate to all envs","Only if they share an environment group","Only in eval orgs"],"answer":0,"explain":"A revision is deployed to one named environment. Promotion is a separate deploy of the same revision (Day 26)."},
+  {"q":"Mutual TLS for a TPP terminates on the…","options":["Northbound (client-facing) edge","Southbound (backend) edge","Control plane","Analytics region"],"answer":0,"explain":"FAPI mTLS between the TPP and the bank is northbound. Southbound mTLS authenticates Apigee to the core banking system."}
+]}
+```
 
 **Next:** Day 02 — we stop drawing and actually provision a working Apigee X org plus the CLI tools you'll use for the rest of the course.

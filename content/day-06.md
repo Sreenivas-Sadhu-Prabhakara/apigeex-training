@@ -16,6 +16,19 @@ A core-banking backend will fall over long before Apigee does. Traffic managemen
 | **SpikeArrest** | "Is traffic arriving *too fast right now*?" | Per-instance, smoothing | Absorbing bursts, protecting the backend's instantaneous rate |
 | **ConcurrentRateLimit** | "How many requests are *in flight* to the backend at once?" | Per-target | Backends with a hard connection/concurrency ceiling |
 
+```mermaid
+flowchart TD
+  Q{"What are you protecting against?"}
+  Q -->|"Too many calls per app/plan<br/>over a time window"| QUOTA["Quota"]
+  Q -->|"Traffic arriving too fast<br/>right now — bursts"| SA["SpikeArrest"]
+  Q -->|"Too many in-flight calls<br/>to the backend at once"| CRL["ConcurrentRateLimit"]
+  QUOTA --> COMPOSE["Typical proxy:<br/>SpikeArrest + Quota together"]
+  SA --> COMPOSE
+  style SA fill:#fff1e3,stroke:#e8710a
+  style QUOTA fill:#eef4ff,stroke:#1a73e8
+  style CRL fill:#eafaf0,stroke:#0b8043
+```
+
 > They compose. A typical proxy uses **SpikeArrest** (machine protection) **+ Quota** (business limit) together. They are not alternatives.
 
 ## Quota
@@ -53,6 +66,12 @@ Smooths the *rate*, not a total. `30pm` = 30 per minute, enforced as ~1 per 2 se
 ```
 
 > SpikeArrest does **not** mean "30 in any 60s window." `30pm` ≈ one allowed every 2000 ms; two requests 100 ms apart trip it. That's the point — it stops bursts.
+
+```widget
+{"type":"ratelimit","title":"SpikeArrest: feel the smoothing","ratePerMin":30}
+```
+
+> Try **Burst ×5**: with `30pm` (one per ~2000 ms) only the first of a tight burst is allowed — the rest get `429`. That's SpikeArrest protecting the instant rate, not a per-minute total.
 
 ## ConcurrentRateLimit
 

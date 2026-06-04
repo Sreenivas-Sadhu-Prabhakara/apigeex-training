@@ -12,6 +12,21 @@ This curriculum follows three rules so it stays learnable:
 - **MECE:** the five pillars below are **mutually exclusive** (no topic is taught in two places) and **collectively exhaustive** (together they cover "all aspects" of Apigee X relevant to banking).
 - **Atomic, but cumulative:** each day is self-contained — one objective, one lab — yet explicitly **builds on** the day before. Skipping is possible but the Open Banking weeks assume the security week.
 
+```mermaid
+flowchart LR
+  A["Foundations<br/>Days 1-2"] --> B["Proxy Dev<br/>Days 3-5"]
+  B --> C["Mediation<br/>Days 6-12"]
+  C --> D["Security & FAPI<br/>Days 13-19"]
+  D --> E["Open Banking<br/>Days 20-25"]
+  E --> F["Operations<br/>Days 26-30"]
+  style A fill:#eef4ff,stroke:#1a73e8
+  style B fill:#f3eefe,stroke:#8a5cf6
+  style C fill:#e6f7f7,stroke:#0aa3a3
+  style D fill:#fff1e3,stroke:#e8710a
+  style E fill:#eafaf0,stroke:#0b8043
+  style F fill:#fdeceb,stroke:#d93025
+```
+
 <div class="pillars">
 <div class="pillar-card"><h4>1 · Foundations</h4>Platform, architecture, provisioning, and your toolchain. <em>Days 1–2.</em></div>
 <div class="pillar-card"><h4>2 · Proxy Development</h4>Proxies, flows, routing, and the policy execution model. <em>Days 3–5.</em></div>
@@ -19,6 +34,14 @@ This curriculum follows three rules so it stays learnable:
 <div class="pillar-card"><h4>4 · Security &amp; Identity</h4>Keys, OAuth, JWT, mTLS, threats, and FAPI. <em>Days 13–19.</em></div>
 <div class="pillar-card"><h4>5 · Open Banking + Ops</h4>Consent, AISP, PISP, DCR, then delivery &amp; production. <em>Days 20–30.</em></div>
 </div>
+
+## Explore the 30 days
+
+Filter by pillar, see your progress, and jump straight in. (Your completion ticks are saved in your browser as you mark days done.)
+
+```widget
+{"type":"curriculummap"}
+```
 
 ## What you need
 
