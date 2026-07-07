@@ -232,7 +232,7 @@ def build_day(curriculum, day):
         + complete_toggle(day)
         + prev_next_html(curriculum, day)
     )
-    title = f"Day {day:02d} — {meta['title']} · Apigee X 30-Day Training"
+    title = seo.seo_title(f"Day {day:02d}: {meta['title']}")
     seo_head = seo.head_block(f"day-{day:02d}.html", title, meta.get("objective", ""))
     html = page_shell(title, sidebar_html(curriculum, day), body, toc_html=toc, day=day, seo_head=seo_head)
     (DOCS / f"day-{day:02d}.html").write_text(html, encoding="utf-8")
@@ -240,7 +240,7 @@ def build_day(curriculum, day):
 
 def build_index(curriculum):
     rendered, _ = render_markdown((CONTENT / "index.md").read_text(encoding="utf-8"))
-    title = f"{curriculum['title']} · {curriculum['subtitle']}"
+    title = seo.seo_title(f"{curriculum['title']} · {curriculum['subtitle']}", is_index=True)
     html = page_shell(
         title,
         sidebar_html(curriculum, active_day=0),
