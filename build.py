@@ -147,7 +147,13 @@ def _scripts(asset_prefix):
     window.__mermaidReady = true;
     }}
   </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    if (document.querySelector('[data-widget="chart"]')) {{
+      var _cjs = document.createElement("script");
+      _cjs.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+      _cjs.defer = true; document.head.appendChild(_cjs);
+    }}
+  </script>
   <script defer src="{asset_prefix}assets/widgets.js"></script>
   <script defer src="{asset_prefix}assets/app.js"></script>
 """
@@ -235,7 +241,7 @@ def build_day(curriculum, day):
         + complete_toggle(day)
         + prev_next_html(curriculum, day)
     )
-    title = seo.seo_title(f"Day {day:02d}: {meta['title']}")
+    title = seo.seo_title(f"Day {day:02d}: {meta['title']}", filename=f"day-{day:02d}.html")
     seo_head = seo.head_block(f"day-{day:02d}.html", title, meta.get("objective", ""))
     html = page_shell(title, sidebar_html(curriculum, day), body, toc_html=toc, day=day, seo_head=seo_head)
     (DOCS / f"day-{day:02d}.html").write_text(html, encoding="utf-8")
