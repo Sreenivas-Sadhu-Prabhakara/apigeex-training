@@ -7,6 +7,29 @@
   <link rel="stylesheet" href="assets/pygments.css">
   <link rel="stylesheet" href="assets/style.css">
   <link rel="stylesheet" href="assets/widgets.css">
+  <!-- SEO:START (managed by seo.py) -->
+  <link rel="canonical" href="https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/day-09.html">
+  <meta name="description" content="Call secondary services mid-flow and decouple backend hostnames with target servers">
+  <meta name="keywords" content="apigee x, open banking, fapi, api proxy, oauth2, api security">
+  <meta name="author" content="Sreenivas Sadhu Prabhakara">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 38'%3E%3Crect x='2' y='2' width='34' height='34' rx='5' fill='%230a0e12'/%3E%3Cpath d='M9 13.5h20M9 24.5h20' stroke='%232bf5c8' stroke-width='1.6' opacity='0.4'/%3E%3Cpath d='M19 6v26' stroke='%232bf5c8' stroke-width='2.4'/%3E%3Ccircle cx='19' cy='19' r='4' fill='%230a0e12' stroke='%232bf5c8' stroke-width='2.4'/%3E%3C/svg%3E">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Apigee X Training Hub">
+  <meta property="og:title" content="Day 09 — Service composition: ServiceCallout & target servers · Apigee X 30-Day Training">
+  <meta property="og:description" content="Call secondary services mid-flow and decouple backend hostnames with target servers">
+  <meta property="og:url" content="https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/day-09.html">
+  <meta property="og:image" content="https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/assets/og/og-fapi.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Day 09 — Service composition: ServiceCallout &amp; target servers · Apigee X 30-Day Training">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Day 09 — Service composition: ServiceCallout & target servers · Apigee X 30-Day Training">
+  <meta name="twitter:description" content="Call secondary services mid-flow and decouple backend hostnames with target servers">
+  <meta name="twitter:image" content="https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/assets/og/og-fapi.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"LearningResource","@id":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/day-09.html#lesson","name":"Day 09 — Service composition: ServiceCallout \u0026 target servers · Apigee X 30-Day Training","description":"Call secondary services mid-flow and decouple backend hostnames with target servers","url":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/day-09.html","inLanguage":"en","isAccessibleForFree":true,"learningResourceType":"lesson","teaches":["apigee x","open banking","fapi","api proxy","oauth2","api security"],"author":{"@type":"Person","name":"Sreenivas Sadhu Prabhakara"},"provider":{"@type":"Organization","name":"Apigee X Training Hub","url":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/"},"isPartOf":{"@type":"Course","@id":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/#course","name":"30-Day Apigee X: Open Banking \u0026 FAPI","url":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/"},{"@type":"ListItem","position":2,"name":"30-Day Apigee X: Open Banking \u0026 FAPI","item":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/"},{"@type":"ListItem","position":3,"name":"Day 09 — Service composition: ServiceCallout \u0026 target servers","item":"https://sreenivas-sadhu-prabhakara.github.io/apigee-courses/fapi-30-day/day-09.html"}]}]}</script>
+  <!-- SEO:END -->
 </head>
 <body>
   <div id="readingBar"></div>

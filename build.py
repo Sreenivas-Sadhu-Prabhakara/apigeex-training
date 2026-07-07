@@ -26,6 +26,8 @@ import re
 import shutil
 from pathlib import Path
 
+import seo  # native SEO head-block generator (repo-root seo.py)
+
 import markdown
 from pygments.formatters import HtmlFormatter
 
@@ -148,7 +150,7 @@ def _scripts(asset_prefix):
 """
 
 
-def page_shell(title, sidebar, body, *, toc_html="", day=None, is_index=False):
+def page_shell(title, sidebar, body, *, toc_html="", day=None, is_index=False, seo_head=""):
     asset_prefix = ""  # docs/ is flat, so assets/ is reachable from every page
     main_attrs = f' data-day="{day}"' if day else ""
     main_cls = "content index" if is_index else "content"
@@ -168,6 +170,7 @@ def page_shell(title, sidebar, body, *, toc_html="", day=None, is_index=False):
   <link rel="stylesheet" href="{asset_prefix}assets/pygments.css">
   <link rel="stylesheet" href="{asset_prefix}assets/style.css">
   <link rel="stylesheet" href="{asset_prefix}assets/widgets.css">
+{seo_head}
 </head>
 <body>
   <div id="readingBar"></div>
@@ -230,17 +233,20 @@ def build_day(curriculum, day):
         + prev_next_html(curriculum, day)
     )
     title = f"Day {day:02d} — {meta['title']} · Apigee X 30-Day Training"
-    html = page_shell(title, sidebar_html(curriculum, day), body, toc_html=toc, day=day)
+    seo_head = seo.head_block(f"day-{day:02d}.html", title, meta.get("objective", ""))
+    html = page_shell(title, sidebar_html(curriculum, day), body, toc_html=toc, day=day, seo_head=seo_head)
     (DOCS / f"day-{day:02d}.html").write_text(html, encoding="utf-8")
 
 
 def build_index(curriculum):
     rendered, _ = render_markdown((CONTENT / "index.md").read_text(encoding="utf-8"))
+    title = f"{curriculum['title']} · {curriculum['subtitle']}"
     html = page_shell(
-        f"{curriculum['title']} · {curriculum['subtitle']}",
+        title,
         sidebar_html(curriculum, active_day=0),
         rendered,
         is_index=True,
+        seo_head=seo.head_block("index.html", title),
     )
     (DOCS / "index.html").write_text(html, encoding="utf-8")
 
